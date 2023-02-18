@@ -3,50 +3,108 @@
 # This exploit template was generated via:
 # $ pwn template /home/denis/AFLplusplus/afl-fuzz
 from pwn import *
+from log_reader import *
 
-# Set up pwntools for the correct architecture
-exe = context.binary = ELF('/home/denis/AFLplusplus/afl-fuzz')
+class Debug():
+    def __init__(
+            self, 
+            afl_path, 
+            gdb_obj,
+            fuzz_base,
+            base_folder_path,
+            log_path='default/replay/check.txt',
+            is_clone=False
+    ):
+        # Set up pwntools for the correct architecture
+        self.exe = context.binary = ELF(afl_path)
+        self.gdb_obj = gdb_obj
+        self.is_clone = is_clone
+        self.io = None
 
-# Many built-in settings can be controlled on the command-line and show up
-# in "args".  For example, to dump all data sent/received, and disable ASLR
-# for all created processes...
-# ./exploit.py DEBUG NOASLR
+        # create a log reader for the base folder
+        self.base_reader = LogReader(os.path.join(fuzz_base, base_folder_path, log_path))
+        self.fuzz_base = fuzz_base
+        self.log_path = log_path
+        self.replay_reader = None
 
+    def debug(self, log_progress_count=50):
+        '''Start the exploit against the target.'''
+        print([self.exe.path] + self.gdb_obj.argv)
+        self.io = gdb.debug([self.exe.path] + self.gdb_obj.argv, gdbscript=self.gdb_obj.gdbscript, api=True)
 
-def start(argv=[], *a, **kw):
-    '''Start the exploit against the target.'''
-    if args.GDB:
-        return gdb.debug([exe.path] + argv, gdbscript=gdbscript, *a, **kw)
-    else:
-        return process([exe.path] + argv, *a, **kw)
+        # create log reader for the replay run
+        self.replay_reader = LogReader(os.path.join(self.fuzz_base, self.gdb_obj.folder_path, self.log_path))
 
-# Specify your GDB script here for debugging
-# GDB will be launched if the exploit is run via e.g.
-# ./exploit.py GDB
-gdbscript = '''
-tbreak main
-continue
-'''.format(**locals())
+        # create log comparison object now that we have two readers
+        self.log_comparator = LogComparator(self.base_reader, self.replay_reader)
 
-#===========================================================
-#                    EXPLOIT GOES HERE
-#===========================================================
-# Arch:     amd64-64-little
-# RELRO:    Full RELRO
-# Stack:    Canary found
-# NX:       NX enabled
-# PIE:      PIE enabled
+        # Go to the end of the reader and check for differences
+        # Might as well check for differences on the way there as well
+        # TODO: Possibility of doing some nice function that decreases log_progress_count if it's close
+        # To the end
+        
+        difference_found = False
+        while not difference_found:
+            while self.log_comparator.progress_readers(log_progress_count) != Progress.PROGRESSION_FINISHED:
+                difference_found = self.log_comparator.compare()
+                if difference_found: break
 
-io = start()
+            if not difference_found:
+                difference_found = self.log_comparator.compare()
+            
+            self.io.gdb.continue_and_wait()
 
-# shellcode = asm(shellcraft.sh())
-# payload = fit({
-#     32: 0xdeadbeef,
-#     'iaaa': [1, 2, 'Hello', 3]
-# }, length=128)
-# io.send(payload)
-# flag = io.recv(...)
-# log.success(flag)
+        # since we found a difference, let's see if we can do anything about it
+        self.io.interactive()
 
-io.interactive()
+class GDBScript():
+    """
+    This gives the args to run afl-fuzz and the function name
+    to break at. We will check for substantial differences when we
+    reach the function with the log reader.
+    """
+    def __init__(self, function_name, folder_path, argv):
+        self.gdbscript = f'''
+                        break {function_name}
+                        continue
+                        '''.format(**locals())
+        self.argv = argv
+        self.folder_path = folder_path
+
+def main():
+    
+    #context.terminal = 'zsh'
+
+    # initialize parameters for instance of Debug
+    afl_path = '/home/denis/AFLplusplus/afl-fuzz'
+    fuzz_base = os.path.expanduser('~/Thesis/fuzzing_xpdf')
+    replay_folder_path = 'outputs/replay'
+    base_folder_path = 'outputs/unseed'
+    log_path = 'default/replay/check.txt'
+    gdb_obj = GDBScript(
+        'save_if_interesting', 
+        replay_folder_path,
+        ['-i',
+         os.path.join(fuzz_base, 'pdf_examples'),
+         '-o',
+         os.path.join(fuzz_base, replay_folder_path),
+         '-r',
+         os.path.join(fuzz_base, 'outputs/unseed'),
+         '--',
+         os.path.join(fuzz_base, 'install/bin/pdftotext'),
+         '@@']
+    )
+
+    debug = Debug(
+        afl_path=afl_path,
+        gdb_obj=gdb_obj,
+        fuzz_base=fuzz_base,
+        base_folder_path=base_folder_path,
+        log_path=log_path,
+        is_clone=False
+    )
+    debug.debug()
+
+if __name__ == '__main__':
+    main()
 
