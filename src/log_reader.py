@@ -2,7 +2,7 @@ import os
 from enum import Enum
 import subprocess
 
-class LogReader():
+class LogReader:
     def __init__(self, path, checkpoint_frequency = 100000):
         self.file = open(os.path.expanduser(path), 'r')
         self.value_iterator = iter(self.file)
@@ -52,25 +52,28 @@ class LogReader():
         if self.index >= self.file_line_count:
             self.file_line_count = self.count_lines()
             if self.index >= self.file_line_count:
-                return False
-        return True
+                return True
+        return False
     
     def close(self):
         self.file.close()
 
-    def print(self):
-        print(self.value)
+    def to_string(self):
+        return f'Index: {self.index}\nValue: {self.value}\nFile Line Count: {self.file_line_count}\n' + \
+                f'Is Done: {self.is_done()}\n'
     
-class LogComparator():
+class LogComparator:
     def __init__(self, reader1: LogReader, reader2: LogReader):
         self.reader1 = reader1
         self.reader2 = reader2
 
-    def compare(self):
+    def compare(self, debug=False):
         """
         If readers are reading together, then compre their values.
         Otherwise, compare checkpoints.
         """
+        if debug:
+            self.print_debug()
         if self.reader1.index == self.reader2.index:
             return self.reader1.value == self.reader2.value
         else:
@@ -107,6 +110,9 @@ class LogComparator():
         """
         self.reader1.close()
         self.reader2.close()
+    
+    def print_debug(self):
+        print('Reader 1:\n' + self.reader1.to_string() + 'Reader 2:\n' + self.reader2.to_string())
 
 class Progress(Enum):
     """
