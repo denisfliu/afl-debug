@@ -17,7 +17,7 @@ class LogReader:
         """
         Don't use this, use next.
         """
-        if self.is_done():
+        if not self.is_done():
             self.value =  next(self.value_iterator).strip()
             return True
         return False
@@ -70,7 +70,7 @@ class LogComparator:
     def compare(self, debug=False):
         """
         If readers are reading together, then compre their values.
-        Otherwise, compare checkpoints.
+        Otherwise, compare checkpoints. Returns true if values are equal.
         """
         if debug:
             self.print_debug()

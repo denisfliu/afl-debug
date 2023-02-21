@@ -4,8 +4,10 @@
 # $ pwn template /home/denis/AFLplusplus/afl-fuzz
 from pwn import *
 from log_reader import *
+from tqdm import tqdm
 import time
 
+DEBUG = False
 class Debug:
     def __init__(
             self, 
@@ -17,7 +19,7 @@ class Debug:
             is_clone=False
     ):
         # Set up pwntools for the correct architecture
-        self.exe = context.binary = ELF(afl_path)
+        self.exe = context.binary = ELF(afl_path, checksec=False)
         self.gdb_obj = gdb_obj
         self.is_clone = is_clone
         self.io = None
@@ -45,21 +47,22 @@ class Debug:
         # TODO: Possibility of doing some nice function that decreases log_progress_count if it's close
         # To the end
 
+        pbar = tqdm(total=self.base_reader.file_line_count)
         difference_found = False
         while not difference_found:
             while self.log_comparator.progress_readers(log_progress_count) != Progress.PROGRESSION_FINISHED:
-                difference_found = self.log_comparator.compare(True)
-                print('bye')
+                pbar.update(log_progress_count)
+                difference_found = not self.log_comparator.compare(debug=DEBUG)
                 if difference_found: break
 
             if not difference_found:
-                print('hello')
-                difference_found = self.log_comparator.compare(True)
+                difference_found = not self.log_comparator.compare(debug=DEBUG)
             
-            print(f'hi: difference found : {difference_found}')
             self.io.gdb.continue_and_wait()
 
         # since we found a difference, let's see if we can do anything about it
+        pbar.close()
+        self.log_comparator.print_debug()
         self.io.interactive()
 
 class GDBScript:
@@ -70,10 +73,10 @@ class GDBScript:
     """
     def __init__(self, function_name, folder_path, argv):
         self.gdbscript = f'''
+                        set pagination off
                         break {function_name}
                         '''.format(**locals())
         self.argv = argv
-        print(argv)
         self.folder_path = folder_path
 
 def main():

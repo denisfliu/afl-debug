@@ -10,7 +10,7 @@
 [1;94m[*] [0mChecking core_pattern...[0m
 [1;94m[*] [0mChecking CPU scaling governor...[0m
 [1;92m[+] [0mLooks like we're not running on a tty, so I'll be a bit less verbose.[0m
-[1;92m[+] [0mYou have 4 CPU cores and 1 runnable tasks (utilization: 25%).[0m
+[1;92m[+] [0mYou have 4 CPU cores and 2 runnable tasks (utilization: 50%).[0m
 [1;92m[+] [0mTry parallel jobs - see /usr/local/share/doc/afl/fuzzing_in_depth.md#c-using-multiple-cores[0m
 [1;94m[*] [0mSetting up output directories...[0m
 [1;94m[*] [0mChecking CPU core loadout...[0m
