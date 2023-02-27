@@ -90,18 +90,20 @@ class Line(DebugType):
         line_reached = False
         while not line_reached:
             if self.replay_reader.file_line_count < self.line_stop:
-                while not self.replay_reader.is_done:
-                    self.replay_reader.next()
+                while self.replay_reader.next():
+                    pass
             else:
                 for _ in range(self.replay_reader.index, self.line_stop):
                     self.replay_reader.next()
-                line_reached = True
+                if self.replay_reader.index == self.line_stop:
+                    line_reached = True
             pbar.update(self.replay_reader.index - pbar.last_print_n)
             self.io.gdb.continue_and_wait()
 
         # since we found a difference, let's see if we can do anything about it
         print(self.replay_reader.to_string())
         self.io.interactive()
+        self.replay_reader.close()
         pbar.close()
 
 class GDBScript:

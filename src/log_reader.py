@@ -31,19 +31,19 @@ class LogReader:
 
         success = self.iterate()
         if not success:
-            return
+            return False
 
         # if an iterator is updated there could be a \n read. skip it
         # this case should never result in a StopIteration case
         if not self.value:
             success = self.iterate()
             if not success:
-                return
+                return False
 
         if self.index % self.checkpoint_frequency == 0:
             self.checkpoints.append(self.value)
         self.index += 1
-
+        return True
 
     def count_lines(self):
         return int(subprocess.check_output(f"wc -l {self.path}", shell=True).split()[0])

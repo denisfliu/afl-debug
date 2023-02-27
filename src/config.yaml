@@ -1,5 +1,5 @@
 afl_path: '/home/denis/AFLplusplus/afl-fuzz'
-debug_mode: 'replay'
+debug_mode: 'line'
 
 fuzz:
   fuzz_folder: '/home/denis/Thesis/fuzzing_xpdf'
@@ -15,7 +15,7 @@ gdb:
       base_folder_path: 'outputs/unseed'
       replay_folder_path: 'outputs/replay'
   line:
-    line_stop: 760 
+    line_stop: 495744
     outputs:
       base_folder_path: 'outputs/unseed'
       replay_folder_path: 'outputs/line'
