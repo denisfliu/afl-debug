@@ -1,0 +1,22 @@
+afl_path: '/home/denis/AFLplusplus/afl-fuzz'
+debug_mode: 'replay'
+
+fuzz:
+  fuzz_folder: '/home/denis/Thesis/fuzzing_xpdf'
+  inputs: 'pdf_examples'
+  binary: 'install/bin/pdftotext'
+
+gdb:
+  breakpoints: ['save_if_interesting']
+  log_path: 'default/replay/check.txt'
+  replay:
+    log_increment: 200
+    outputs:
+      base_folder_path: 'outputs/unseed'
+      replay_folder_path: 'outputs/replay'
+  line:
+    line_stop: 760 
+    outputs:
+      base_folder_path: 'outputs/unseed'
+      replay_folder_path: 'outputs/line'
+  

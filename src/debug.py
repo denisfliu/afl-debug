@@ -4,66 +4,105 @@
 # $ pwn template /home/denis/AFLplusplus/afl-fuzz
 from pwn import *
 from log_reader import *
+from omegaconf import OmegaConf
 from tqdm import tqdm
-import time
 
-DEBUG = False
-class Debug:
+class DebugType:
     def __init__(
-            self, 
-            afl_path, 
+            self,
             gdb_obj,
-            fuzz_base,
-            base_folder_path,
-            log_path='default/replay/check.txt',
-            is_clone=False
     ):
         # Set up pwntools for the correct architecture
-        self.exe = context.binary = ELF(afl_path, checksec=False)
+        self.exe = context.binary = ELF(gdb_obj.afl_path, checksec=False)
         self.gdb_obj = gdb_obj
-        self.is_clone = is_clone
         self.io = None
+        self.fuzz_base = gdb_obj.fuzz_folder
+        self.log_path = gdb_obj.log_path
 
-        # create a log reader for the base folder
-        self.base_reader = LogReader(os.path.join(fuzz_base, base_folder_path, log_path))
-        self.fuzz_base = fuzz_base
-        self.log_path = log_path
-        self.replay_reader = None
-
-    def debug(self, log_progress_count=50):
+    def debug(self):
         '''Start the exploit against the target.'''
         self.io = gdb.debug([self.exe.path] + self.gdb_obj.argv, gdbscript=self.gdb_obj.gdbscript, api=True)
         self.io.gdb.continue_and_wait()
+        self.stop()
 
+    def stop(self):
+        raise NotImplementedError
+
+class Replay(DebugType):
+    def __init__(
+            self, 
+            gdb_obj,
+            log_increment,
+    ):
+        super().__init__(
+            gdb_obj=gdb_obj,
+        )
+        self.log_increment = log_increment
+    
+    def stop(self):
         # create log reader for the replay run
-        self.replay_reader = LogReader(os.path.join(self.fuzz_base, self.gdb_obj.folder_path, self.log_path))
+        self.base_reader = LogReader(os.path.join(self.fuzz_base, self.gdb_obj.base_folder_path, self.log_path))
+        self.replay_reader = LogReader(os.path.join(self.fuzz_base, self.gdb_obj.replay_folder_path, self.log_path))
 
         # create log comparison object now that we have two readers
         self.log_comparator = LogComparator(self.base_reader, self.replay_reader)
 
-
         # Go to the end of the reader and check for differences
         # Might as well check for differences on the way there as well
-        # TODO: Possibility of doing some nice function that decreases log_progress_count if it's close
+        # TODO: Possibility of doing some nice function that decreases log_increment if it's close
         # To the end
 
         pbar = tqdm(total=self.base_reader.file_line_count)
-        difference_found = False
-        while not difference_found:
-            while self.log_comparator.progress_readers(log_progress_count) != Progress.PROGRESSION_FINISHED:
-                pbar.update(log_progress_count)
-                difference_found = not self.log_comparator.compare(debug=DEBUG)
-                if difference_found: break
+        while True:
+            difference_found = False
+            while not difference_found:
+                while self.log_comparator.progress_readers(self.log_increment) != Progress.PROGRESSION_FINISHED:
+                    difference_found = not self.log_comparator.compare()
+                    if difference_found: break
+                pbar.update(self.replay_reader.file_line_count - pbar.last_print_n)
 
-            if not difference_found:
-                difference_found = not self.log_comparator.compare(debug=DEBUG)
-            
+                if not difference_found:
+                    difference_found = not self.log_comparator.compare()
+                
+                self.io.gdb.continue_and_wait()
+
+            # since we found a difference, let's see if we can do anything about it
+            self.log_comparator.print_debug()
+            self.io.interactive()
+        pbar.close()
+
+class Line(DebugType):
+    def __init__(
+            self, 
+            gdb_obj,
+            line_stop,
+    ):
+        super().__init__(
+            gdb_obj=gdb_obj,
+        )
+        self.line_stop = line_stop
+    
+    def stop(self):
+        # create log reader for the replay run
+        self.replay_reader = LogReader(os.path.join(self.fuzz_base, self.gdb_obj.replay_folder_path, self.log_path))
+
+        pbar = tqdm(total=self.line_stop)
+        line_reached = False
+        while not line_reached:
+            if self.replay_reader.file_line_count < self.line_stop:
+                while not self.replay_reader.is_done:
+                    self.replay_reader.next()
+            else:
+                for _ in range(self.replay_reader.index, self.line_stop):
+                    self.replay_reader.next()
+                line_reached = True
+            pbar.update(self.replay_reader.index - pbar.last_print_n)
             self.io.gdb.continue_and_wait()
 
         # since we found a difference, let's see if we can do anything about it
-        pbar.close()
-        self.log_comparator.print_debug()
+        print(self.replay_reader.to_string())
         self.io.interactive()
+        pbar.close()
 
 class GDBScript:
     """
@@ -71,48 +110,62 @@ class GDBScript:
     to break at. We will check for substantial differences when we
     reach the function with the log reader.
     """
-    def __init__(self, function_name, folder_path, argv):
+    def __init__(self, config):
         self.gdbscript = f'''
                         set pagination off
-                        break {function_name}
                         '''.format(**locals())
-        self.argv = argv
-        self.folder_path = folder_path
+        
+        for breakpoint in config.gdb.breakpoints:
+            self.gdbscript += f'break {breakpoint}\n'.format(**locals())
+
+        self.afl_path = config.afl_path
+        self.fuzz_folder = config.fuzz.fuzz_folder
+        self.log_path = config.gdb.log_path
+        binary_path = config.fuzz.binary
+        inputs = config.fuzz.inputs
+
+        if config.debug_mode == 'replay':
+            self.base_folder_path = config.gdb.replay.outputs.base_folder_path
+            self.replay_folder_path = config.gdb.replay.outputs.replay_folder_path
+        elif config.debug_mode == 'line':
+            self.base_folder_path = config.gdb.line.outputs.base_folder_path
+            self.replay_folder_path = config.gdb.line.outputs.replay_folder_path
+        else:
+            raise NotImplementedError
+
+        self.argv = [
+            '-i',
+            os.path.join(self.fuzz_folder, inputs),
+            '-o',
+            os.path.join(self.fuzz_folder, self.replay_folder_path),
+            '-r',
+            os.path.join(self.fuzz_folder, self.base_folder_path),
+            '--',
+            os.path.join(self.fuzz_folder, binary_path),
+            '@@',
+            '>',
+            'temp'
+        ]
 
 def main():
-    
-    #context.terminal = 'zsh'
-
     # initialize parameters for instance of Debug
-    afl_path = '/home/denis/AFLplusplus/afl-fuzz'
-    fuzz_base = os.path.expanduser('~/Thesis/fuzzing_xpdf')
-    replay_folder_path = 'outputs/replay'
-    base_folder_path = 'outputs/unseed'
-    log_path = 'default/replay/check.txt'
-    gdb_obj = GDBScript(
-        'save_if_interesting', 
-        replay_folder_path,
-        ['-i',
-         os.path.join(fuzz_base, 'pdf_examples'),
-         '-o',
-         os.path.join(fuzz_base, replay_folder_path),
-         '-r',
-         os.path.join(fuzz_base, 'outputs/unseed'),
-         '--',
-         os.path.join(fuzz_base, 'install/bin/pdftotext'),
-         '@@',
-         '>',
-         'temp']
-    )
+    config_path = 'config.yaml'
+    config = OmegaConf.load(config_path)
+    gdb_obj = GDBScript(config)
 
-    debug = Debug(
-        afl_path=afl_path,
-        gdb_obj=gdb_obj,
-        fuzz_base=fuzz_base,
-        base_folder_path=base_folder_path,
-        log_path=log_path,
-        is_clone=False
-    )
+    if config.debug_mode == 'replay':
+        debug = Replay(
+            gdb_obj=gdb_obj,
+            log_increment=config.gdb.replay.log_increment
+        )
+    elif config.debug_mode == 'line':
+        debug = Line(
+            gdb_obj=gdb_obj,
+            line_stop=config.gdb.line.line_stop
+        )
+    else:
+        raise NotImplementedError
+
     debug.debug()
 
 if __name__ == '__main__':

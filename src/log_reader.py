@@ -67,13 +67,11 @@ class LogComparator:
         self.reader1 = reader1
         self.reader2 = reader2
 
-    def compare(self, debug=False):
+    def compare(self):
         """
         If readers are reading together, then compre their values.
         Otherwise, compare checkpoints. Returns true if values are equal.
         """
-        if debug:
-            self.print_debug()
         if self.reader1.index == self.reader2.index:
             return self.reader1.value == self.reader2.value
         else:
