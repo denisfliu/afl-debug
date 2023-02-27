@@ -144,7 +144,7 @@ class GDBScript:
             os.path.join(self.fuzz_folder, binary_path),
             '@@',
             '>',
-            'temp'
+            'temp.txt'
         ]
 
 def main():
