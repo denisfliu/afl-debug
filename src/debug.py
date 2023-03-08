@@ -89,15 +89,11 @@ class Line(DebugType):
         pbar = tqdm(total=self.line_stop)
         line_reached = False
         while not line_reached:
-            if self.replay_reader.file_line_count < self.line_stop:
-                while self.replay_reader.next():
-                    pass
-            else:
-                for _ in range(self.replay_reader.index, self.line_stop):
-                    self.replay_reader.next()
-                if self.replay_reader.index == self.line_stop:
-                    line_reached = True
+            while self.replay_reader.next():
+                pass
             pbar.update(self.replay_reader.index - pbar.last_print_n)
+            if self.replay_reader.index >= self.line_stop:
+                line_reached = True
             self.io.gdb.continue_and_wait()
 
         # since we found a difference, let's see if we can do anything about it
