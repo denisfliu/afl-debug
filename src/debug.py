@@ -3,7 +3,7 @@
 # This exploit template was generated via:
 # $ pwn template /home/denis/AFLplusplus/afl-fuzz
 from pwn import *
-from log_reader import *
+from utils import *
 from omegaconf import OmegaConf
 from tqdm import tqdm
 

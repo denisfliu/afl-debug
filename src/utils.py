@@ -2,6 +2,19 @@ import os
 from enum import Enum
 import subprocess
 
+class SeedComparator:
+    def __init__(self, target_seed_path):
+        self.target_seed_path = target_seed_path
+    
+    def compare_seeds(self, seed1_path, seed2_path):
+        if int(subprocess.check_output(f"cmp {seed1_path} {seed2_path} | wc -l", shell=True).split()[0]) == 0:
+            return 0
+        return int(subprocess.check_output(f"diff -y --suppress-common-lines <(xxd {seed1_path}) <(xxd {seed2_path}) | wc -l", shell=True).split()[0])
+    
+    def compare_to_target(self, seed_path):
+        return self.compare_seeds(self.target_seed_path, seed_path)
+        
+
 class LogReader:
     def __init__(self, path, checkpoint_frequency = 100000):
         self.file = open(os.path.expanduser(path), 'r')
