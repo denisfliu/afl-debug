@@ -2,7 +2,11 @@ import os
 from enum import Enum
 import subprocess
 
-class SeedComparator:
+class SeedComparatorBase:
+    """
+    This class is meant to be parent class so that different
+    seed comparison heuristics can be used.
+    """
     def __init__(self, target_seed_path):
         self.target_seed_path = target_seed_path
     

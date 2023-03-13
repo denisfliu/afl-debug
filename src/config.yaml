@@ -1,5 +1,5 @@
 afl_path: '/home/denis/AFLplusplus/afl-fuzz'
-debug_mode: 'replay'
+debug_mode: 'Seed'
 
 fuzz:
   fuzz_folder: '/home/denis/Thesis/fuzzing_xpdf'
@@ -7,22 +7,16 @@ fuzz:
   binary: 'install/bin/pdftotext'
 
 gdb:
-  breakpoints: ['afl-fuzz-init.c:778']
+  breakpoints: ['afl-fuzz-bitmap.c:545']
   log_path: 'default/replay/check.txt'
+  base_folder_path: 'outputs/unseed'
+  replay_folder_path: 'outputs/replay'
   replay:
     log_increment: 200
-    outputs:
-      base_folder_path: 'outputs/unseed'
-      replay_folder_path: 'outputs/replay'
   line:
     line_stop: 49500
-    outputs:
-      base_folder_path: 'outputs/unseed'
-      replay_folder_path: 'outputs/line'
   seed:
+    seed_comparator: 'SeedComparatorBase'
     target_path: 'outputs/unseed/target'
     min_distance: 150
-    outputs:
-      base_folder_path: 'outputs/unseed'
-      replay_folder_path: 'outputs/seed'
   

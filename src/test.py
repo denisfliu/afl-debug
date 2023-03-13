@@ -2,11 +2,12 @@ from utils import *
 import os
 import time
 import struct
+import factory
 
 # too lazy to use asserts
 # testing the iterator is working properly
 # tests file expanding during iteration and 
-def log_reader_test1():
+def log_reader_test():
     f1 = open('temp.txt', 'wt')
     reader = LogReader('temp.txt')
 
@@ -63,10 +64,10 @@ def manual_test1():
     print(f'{end - start} seconds to finish reading {reader.count_lines()} lines')
 
 # this test sucks
-def seed_comparator_test1():
+def seed_comparator_test():
     file_names = ['temp.so', 'temp1.so']
     files = []
-    seed_cmp = SeedComparator(file_names[0])
+    seed_cmp = SeedComparatorBase(file_names[0])
     for name in file_names:
         files.append(open(name, 'wb'))
         
@@ -120,10 +121,51 @@ def seed_comparator_test1():
     end()
     return True
 
+def factory_debug_type_test():
+    try:
+        factory.debug_type('seed', None, None)
+        return False
+    except AssertionError:
+        pass
+
+    try:
+        factory.debug_type('GDBScript', None, None)
+        return False
+    except AssertionError:
+        pass
+
+    try:
+        factory.debug_type('Seed', None, None)
+    except AssertionError:
+        return False
+    except AttributeError:
+        pass
+    
+    return True
+
+def factory_seed_comparator_test():
+    try:
+        factory.seed_comparator('seed', None)
+        return False
+    except AssertionError:
+        pass
+
+    try:
+        factory.seed_comparator('LogComparator', None)
+        return False
+    except AssertionError:
+        pass
+
+    try:
+        factory.seed_comparator('SeedComparatorBase', None)
+    except AssertionError:
+        return False
+    
+    return True
 
 def main():
     failures = []
-    tests = [log_reader_test1, seed_comparator_test1]
+    tests = [log_reader_test, seed_comparator_test, factory_debug_type_test, factory_seed_comparator_test]
     
     for test in tests:
         if not test():

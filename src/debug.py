@@ -6,6 +6,7 @@ from pwn import *
 from utils import *
 from omegaconf import OmegaConf
 from tqdm import tqdm
+import factory
 import glob
 
 class DebugType:
@@ -33,12 +34,12 @@ class Replay(DebugType):
     def __init__(
             self, 
             gdb_obj,
-            log_increment,
+            config
     ):
         super().__init__(
             gdb_obj=gdb_obj,
         )
-        self.log_increment = log_increment
+        self.log_increment = config.gdb.replay.log_increment
     
     def stop(self):
         # create log reader for the replay run
@@ -76,25 +77,24 @@ class Line(DebugType):
     def __init__(
             self, 
             gdb_obj,
-            line_stop,
+            config
     ):
         super().__init__(
             gdb_obj=gdb_obj,
         )
-        self.line_stop = line_stop
+        self.line_stop = config.gdb.line.line_stop
     
     def stop(self):
         # create log reader for the replay run
         self.replay_reader = LogReader(os.path.join(self.fuzz_base, self.gdb_obj.replay_folder_path, self.log_path))
 
         pbar = tqdm(total=self.line_stop)
-        line_reached = False
-        while not line_reached:
+        while True:
             while self.replay_reader.next():
                 pass
             pbar.update(self.replay_reader.index - pbar.last_print_n)
             if self.replay_reader.index >= self.line_stop:
-                line_reached = True
+                break
             self.io.gdb.continue_and_wait()
 
         # since we found a difference, let's see if we can do anything about it
@@ -107,14 +107,15 @@ class Seed(DebugType):
     def __init__(
             self, 
             gdb_obj,
-            target_path,
-            min_distance,
+            config
     ):
         super().__init__(
             gdb_obj=gdb_obj,
         )
-        self.min_distance = min_distance
-        self.seed_comparator = SeedComparator(os.path.join(gdb_obj.fuzz_folder, target_path))
+        target_path = os.path.join(gdb_obj.fuzz_folder, config.gdb.seed.target_path)
+        seed_comparator_name = config.gdb.seed.seed_comparator
+        self.seed_comparator = factory.seed_comparator(seed_comparator_name, target_path)
+        self.min_distance=config.gdb.seed.min_distance
         self.queue_folder = os.path.join(gdb_obj.fuzz_folder, gdb_obj.replay_folder_path, 'default/queue')
     
     def stop(self):
@@ -138,9 +139,7 @@ class Seed(DebugType):
 
 class GDBScript:
     """
-    This gives the args to run afl-fuzz and the function name
-    to break at. We will check for substantial differences when we
-    reach the function with the log reader.
+    This gives the args to run afl-fuzz and the desired breakpoints.
     """
     def __init__(self, config):
         self.gdbscript = f'''
@@ -153,20 +152,10 @@ class GDBScript:
         self.afl_path = config.afl_path
         self.fuzz_folder = config.fuzz.fuzz_folder
         self.log_path = config.gdb.log_path
+        self.base_folder_path = config.gdb.base_folder_path
+        self.replay_folder_path = config.gdb.replay_folder_path
         binary_path = config.fuzz.binary
         inputs = config.fuzz.inputs
-
-        if config.debug_mode == 'replay':
-            self.base_folder_path = config.gdb.replay.outputs.base_folder_path
-            self.replay_folder_path = config.gdb.replay.outputs.replay_folder_path
-        elif config.debug_mode == 'line':
-            self.base_folder_path = config.gdb.line.outputs.base_folder_path
-            self.replay_folder_path = config.gdb.line.outputs.replay_folder_path
-        elif config.debug_mode == 'seed':
-            self.base_folder_path = config.gdb.seed.outputs.base_folder_path
-            self.replay_folder_path = config.gdb.seed.outputs.replay_folder_path
-        else:
-            raise NotImplementedError
 
         self.argv = [
             '-i',
@@ -188,24 +177,7 @@ def main():
     config = OmegaConf.load(config_path)
     gdb_obj = GDBScript(config)
 
-    if config.debug_mode == 'replay':
-        debug = Replay(
-            gdb_obj=gdb_obj,
-            log_increment=config.gdb.replay.log_increment
-        )
-    elif config.debug_mode == 'line':
-        debug = Line(
-            gdb_obj=gdb_obj,
-            line_stop=config.gdb.line.line_stop
-        )
-    elif config.debug_mode == 'seed':
-        debug = Seed(
-            gdb_obj=gdb_obj,
-            target_path=config.gdb.seed.target_path,
-            min_distance=config.gdb.seed.min_distance
-        )
-    else:
-        raise NotImplementedError
+    debug = factory.debug_type(config.debug_mode, gdb_obj, config)
 
     assert not os.path.exists(os.path.join(gdb_obj.fuzz_folder, gdb_obj.replay_folder_path)), f"Path: {gdb_obj.replay_folder_path} already exists."
     assert check_scaling_governor, "Scaling governor check failed. Run an arbitrary AFL run for more info."
