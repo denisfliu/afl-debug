@@ -6,6 +6,7 @@ from pwn import *
 from utils import *
 from omegaconf import OmegaConf
 from tqdm import tqdm
+import glob
 
 class DebugType:
     def __init__(
@@ -102,6 +103,39 @@ class Line(DebugType):
         self.replay_reader.close()
         pbar.close()
 
+class Seed(DebugType):
+    def __init__(
+            self, 
+            gdb_obj,
+            target_path,
+            min_distance,
+    ):
+        super().__init__(
+            gdb_obj=gdb_obj,
+        )
+        self.min_distance = min_distance
+        self.seed_comparator = SeedComparator(os.path.join(gdb_obj.fuzz_folder, target_path))
+        self.queue_folder = os.path.join(gdb_obj.fuzz_folder, gdb_obj.replay_folder_path, 'default/queue')
+    
+    def stop(self):
+        distance = self.check_latest_queue()
+        while True:
+            while distance > self.min_distance:
+                self.io.gdb.continue_and_wait()
+                distance = self.check_latest_queue()
+            # since we found a difference, let's see if we can do anything about it
+            self.io.interactive()
+
+    # this is not efficient
+    def check_latest_queue(self):
+        list_of_files = glob.glob(f'{self.queue_folder}/*')
+        if not list_of_files:
+            return self.min_distance + 1
+        latest_file = max(list_of_files, key=os.path.getctime)
+        seed_distance = self.seed_comparator.compare_to_target(latest_file)
+        print(f'Seed {latest_file} distance: {seed_distance}')
+        return seed_distance
+
 class GDBScript:
     """
     This gives the args to run afl-fuzz and the function name
@@ -128,6 +162,9 @@ class GDBScript:
         elif config.debug_mode == 'line':
             self.base_folder_path = config.gdb.line.outputs.base_folder_path
             self.replay_folder_path = config.gdb.line.outputs.replay_folder_path
+        elif config.debug_mode == 'seed':
+            self.base_folder_path = config.gdb.seed.outputs.base_folder_path
+            self.replay_folder_path = config.gdb.seed.outputs.replay_folder_path
         else:
             raise NotImplementedError
 
@@ -161,8 +198,17 @@ def main():
             gdb_obj=gdb_obj,
             line_stop=config.gdb.line.line_stop
         )
+    elif config.debug_mode == 'seed':
+        debug = Seed(
+            gdb_obj=gdb_obj,
+            target_path=config.gdb.seed.target_path,
+            min_distance=config.gdb.seed.min_distance
+        )
     else:
         raise NotImplementedError
+
+    assert not os.path.exists(os.path.join(gdb_obj.fuzz_folder, gdb_obj.replay_folder_path)), f"Path: {gdb_obj.replay_folder_path} already exists."
+    assert check_scaling_governor, "Scaling governor check failed. Run an arbitrary AFL run for more info."
 
     debug.debug()
 

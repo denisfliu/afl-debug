@@ -136,3 +136,7 @@ class Progress(Enum):
     PROGRESSION_SUCCESSFUL = 1
     PROGRESSION_FAILED = 2
     PROGRESSION_FINISHED = 3
+
+def check_scaling_governor():
+    sg = subprocess.check_output("cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor", shell=True).split()
+    return all([perf == b'performance' for perf in sg])

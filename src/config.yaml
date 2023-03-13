@@ -7,7 +7,7 @@ fuzz:
   binary: 'install/bin/pdftotext'
 
 gdb:
-  breakpoints: ['save_if_interesting']
+  breakpoints: ['afl-fuzz-init.c:778']
   log_path: 'default/replay/check.txt'
   replay:
     log_increment: 200
@@ -19,4 +19,10 @@ gdb:
     outputs:
       base_folder_path: 'outputs/unseed'
       replay_folder_path: 'outputs/line'
+  seed:
+    target_path: 'outputs/unseed/target'
+    min_distance: 150
+    outputs:
+      base_folder_path: 'outputs/unseed'
+      replay_folder_path: 'outputs/seed'
   
