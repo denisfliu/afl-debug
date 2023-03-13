@@ -62,8 +62,9 @@ def manual_test1():
     end = time.perf_counter()
     print(f'{end - start} seconds to finish reading {reader.count_lines()} lines')
 
+# this test sucks
 def seed_comparator_test1():
-    file_names = ['temp.txt', 'temp1.txt']
+    file_names = ['temp.so', 'temp1.so']
     files = []
     seed_cmp = SeedComparator(file_names[0])
     for name in file_names:
@@ -85,6 +86,8 @@ def seed_comparator_test1():
         else:
             files[0].write(a)
             files[1].write(b)
+        files[0].flush()
+        files[1].flush()
 
     x = 4
     random_vars = [b'4', x.to_bytes(2, 'little'), bytearray(struct.pack('f', 4.3)), b'1234', bytes((1, 4, 3))]
@@ -99,17 +102,19 @@ def seed_comparator_test1():
     if seed_cmp.compare_to_target(fname) != 0: return end(3)
     
     write_to_files(random_vars[2], random_vars[3])
-    if seed_cmp.compare_to_target(fname) != 1:
-        print(seed_cmp.compare_to_target(fname))
-        return end(4)
+    if seed_cmp.compare_to_target(fname) != 1: return end(4)
 
-    write_to_files(random_vars[3], random_vars[2])
-    if seed_cmp.compare_to_target(fname) != 2: return end(5)
+    for _ in range(4):
+        write_to_files(random_vars[3], random_vars[2])
+    if seed_cmp.compare_to_target(fname) != 2: 
+        print(seed_cmp.compare_to_target(fname))
+        return end(5)
 
     write_to_files(random_vars[3])
     if seed_cmp.compare_to_target(fname) != 2: return end(6)
 
-    write_to_files(random_vars[3], random_vars[2])
+    for _ in range(4):
+        write_to_files(random_vars[3], random_vars[2])
     if seed_cmp.compare_to_target(fname) != 3: return end(7)
 
     end()
