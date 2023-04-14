@@ -115,13 +115,13 @@ class Seed(DebugType):
         target_path = os.path.join(gdb_obj.fuzz_folder, config.gdb.seed.target_path)
         seed_comparator_name = config.gdb.seed.seed_comparator
         self.seed_comparator = factory.seed_comparator(seed_comparator_name, target_path)
-        self.min_distance=config.gdb.seed.min_distance
+        self.max_distance=config.gdb.seed.max_distance
         self.queue_folder = os.path.join(gdb_obj.fuzz_folder, gdb_obj.replay_folder_path, 'default/queue')
     
     def stop(self):
         distance = self.check_latest_queue()
         while True:
-            while distance > self.min_distance:
+            while distance > self.max_distance:
                 self.io.gdb.continue_and_wait()
                 distance = self.check_latest_queue()
             # since we found a difference, let's see if we can do anything about it
@@ -131,7 +131,7 @@ class Seed(DebugType):
     def check_latest_queue(self):
         list_of_files = glob.glob(f'{self.queue_folder}/*')
         if not list_of_files:
-            return self.min_distance + 1
+            return self.max_distance + 1
         latest_file = max(list_of_files, key=os.path.getctime)
         seed_distance = self.seed_comparator.compare_to_target(latest_file)
         print(f'Seed {latest_file} distance: {seed_distance}')
