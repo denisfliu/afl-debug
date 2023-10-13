@@ -117,10 +117,14 @@ class Seed(DebugType):
         )
         target_path = os.path.join(gdb_obj.fuzz_folder, config.gdb.seed.target_path)
         seed_comparator_name = config.gdb.seed.seed_comparator
-        self.seed_comparator = factory.seed_comparator(seed_comparator_name, target_path)
-        self.max_distance=config.gdb.seed.max_distance
-        self.queue_folder = os.path.join(gdb_obj.fuzz_folder, gdb_obj.replay_folder_path, 'default/queue')
-    
+        self.seed_comparator = factory.seed_comparator(
+            seed_comparator_name, target_path
+        )
+        self.max_distance = config.gdb.seed.max_distance
+        self.queue_folder = os.path.join(
+            gdb_obj.fuzz_folder, gdb_obj.replay_folder_path, "default/queue"
+        )
+
     def stop(self):
         distance = self.check_latest_queue()
         while True:
