@@ -1,85 +1,95 @@
-from utils import *
 import os
 import time
 import struct
-import factory
+
+import src.fdb.factory as factory
+from src.fdb.utils import *
+
 
 # too lazy to use asserts
 # testing the iterator is working properly
-# tests file expanding during iteration and 
+# tests file expanding during iteration and
 def log_reader_test():
-    f1 = open('temp.txt', 'wt')
-    reader = LogReader('temp.txt')
+    f1 = open("temp.txt", "wt")
+    reader = LogReader("temp.txt")
 
     def end(stop_point=None):
         f1.close()
-        os.remove('temp.txt')
+        os.remove("temp.txt")
         reader.close()
         if stop_point is not None:
-            print(f'log_reader_test1 stopped at {stop_point}')
+            print(f"log_reader_test1 stopped at {stop_point}")
         return False
 
     for i in range(10):
-        s = str(i) + '\n'
+        s = str(i) + "\n"
         f1.write(s)
         f1.flush()
-    
+
     for i in range(9):
         reader.next()
-        if str(i) != reader.value: return end(1)
-    
-    f1.write('10\n')
+        if str(i) != reader.value:
+            return end(1)
+
+    f1.write("10\n")
     f1.flush()
-    f1.write('11\n')
+    f1.write("11\n")
     f1.flush()
-    f1.write('12\n')
+    f1.write("12\n")
     f1.flush()
-    
+
     for i in range(9, 13):
         reader.next()
-        if str(i) != reader.value: return end(2)
-    
+        if str(i) != reader.value:
+            return end(2)
+
     for _ in range(3):
         reader.next()
-        if '12' != reader.value: return end(3)
+        if "12" != reader.value:
+            return end(3)
 
-    f1.write('13\n')
+    f1.write("13\n")
     f1.flush()
-    f1.write('14\n')
+    f1.write("14\n")
     f1.flush()
     for i in range(13, 15):
         reader.next()
-        if str(i) != reader.value: return end(4)
-    
+        if str(i) != reader.value:
+            return end(4)
+
     end()
     return True
+
 
 # tests speed of log reader
 def manual_test1():
     start = time.perf_counter()
-    reader = LogReader('~/Thesis/fuzzing_xpdf/outputs/bad1/replay3/default/replay/check.txt')
+    reader = LogReader(
+        "~/Thesis/fuzzing_xpdf/outputs/bad1/replay3/default/replay/check.txt"
+    )
     while not reader.is_done():
         reader.next()
     end = time.perf_counter()
-    print(f'{end - start} seconds to finish reading {reader.count_lines()} lines')
+    print(f"{end - start} seconds to finish reading {reader.count_lines()} lines")
+
 
 # this test sucks
 def seed_comparator_test():
-    file_names = ['temp.so', 'temp1.so']
+    file_names = ["temp.so", "temp1.so"]
     files = []
     seed_cmp = SeedComparatorBase(file_names[0])
     for name in file_names:
-        files.append(open(name, 'wb'))
-        
+        files.append(open(name, "wb"))
+
     def end(stop_point=None):
         for file in files:
             file.close()
         for name in file_names:
             os.remove(name)
         if stop_point is not None:
-            print(f'seed_comparator_test1 failed at {stop_point}')
+            print(f"seed_comparator_test1 failed at {stop_point}")
         return False
-    
+
     def write_to_files(a, b=None):
         if b is None:
             for file in files:
@@ -91,96 +101,117 @@ def seed_comparator_test():
         files[1].flush()
 
     x = 4
-    random_vars = [b'4', x.to_bytes(2, 'little'), bytearray(struct.pack('f', 4.3)), b'1234', bytes((1, 4, 3))]
+    random_vars = [
+        b"4",
+        x.to_bytes(2, "little"),
+        bytearray(struct.pack("f", 4.3)),
+        b"1234",
+        bytes((1, 4, 3)),
+    ]
     fname = file_names[1]
 
-    if seed_cmp.compare_to_target(fname) != 0: return end(1)
+    if seed_cmp.compare_to_target(fname) != 0:
+        return end(1)
 
     write_to_files(random_vars[0])
-    if seed_cmp.compare_to_target(fname) != 0: return end(2)
+    if seed_cmp.compare_to_target(fname) != 0:
+        return end(2)
 
     write_to_files(random_vars[1])
-    if seed_cmp.compare_to_target(fname) != 0: return end(3)
-    
+    if seed_cmp.compare_to_target(fname) != 0:
+        return end(3)
+
     write_to_files(random_vars[2], random_vars[3])
-    if seed_cmp.compare_to_target(fname) != 1: return end(4)
+    if seed_cmp.compare_to_target(fname) != 1:
+        return end(4)
 
     for _ in range(4):
         write_to_files(random_vars[3], random_vars[2])
-    if seed_cmp.compare_to_target(fname) != 2: 
+    if seed_cmp.compare_to_target(fname) != 2:
         print(seed_cmp.compare_to_target(fname))
         return end(5)
 
     write_to_files(random_vars[3])
-    if seed_cmp.compare_to_target(fname) != 2: return end(6)
+    if seed_cmp.compare_to_target(fname) != 2:
+        return end(6)
 
     for _ in range(4):
         write_to_files(random_vars[3], random_vars[2])
-    if seed_cmp.compare_to_target(fname) != 3: return end(7)
+    if seed_cmp.compare_to_target(fname) != 3:
+        return end(7)
 
     end()
     return True
 
+
 def factory_debug_type_test():
     try:
-        factory.debug_type('seed', None, None)
+        factory.debug_type("seed", None, None)
         return False
     except AssertionError:
         pass
 
     try:
-        factory.debug_type('GDBScript', None, None)
+        factory.debug_type("GDBScript", None, None)
         return False
     except AssertionError:
         pass
 
     try:
-        factory.debug_type('Seed', None, None)
+        factory.debug_type("Seed", None, None)
     except AssertionError:
         return False
     except AttributeError:
         pass
-    
+
     return True
+
 
 def factory_seed_comparator_test():
     try:
-        factory.seed_comparator('seed', None)
+        factory.seed_comparator("seed", None)
         return False
     except AssertionError:
         pass
 
     try:
-        factory.seed_comparator('LogComparator', None)
+        factory.seed_comparator("LogComparator", None)
         return False
     except AssertionError:
         pass
 
     try:
-        factory.seed_comparator('SeedComparatorBase', None)
+        factory.seed_comparator("SeedComparatorBase", None)
     except AssertionError:
         return False
-    
+
     return True
+
 
 def main():
     failures = []
-    tests = [log_reader_test, seed_comparator_test, factory_debug_type_test, factory_seed_comparator_test]
-    
+    tests = [
+        log_reader_test,
+        seed_comparator_test,
+        factory_debug_type_test,
+        factory_seed_comparator_test,
+    ]
+
     for test in tests:
         if not test():
             failures.append(test.__name__)
-    
-    msg = ''
+
+    msg = ""
     if not failures:
-        msg = 'All tests passed.'
+        msg = "All tests passed."
     else:
-        msg = f'{len(failures)} tests failed:\n'
+        msg = f"{len(failures)} tests failed:\n"
         for failure in failures:
-            msg += f'{failure}\n'
+            msg += f"{failure}\n"
 
     print(msg)
 
+
 if __name__ == "__main__":
     main()
-    #manual_test1()
+    # manual_test1()
