@@ -5,7 +5,8 @@ TODO: formatter
 
 ## AFL++ Benchmark
 Currently using 3 test binaries: Xpdf, sleep, and objdump
-Xpdf: https://github.com/antonio-morales/Fuzzing101/tree/main/Exercise%201
+
+Xpdf: (mostly following this tutorial https://github.com/antonio-morales/Fuzzing101/tree/main/Exercise%201)
  - Download: wget https://dl.xpdfreader.com/old/xpdf-3.02.tar.gz
  - Compile:
    - CC=afl-clang-lto ./configure
