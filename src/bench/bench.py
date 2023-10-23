@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from enum import Enum
-from src.compare import compare
+from src.bench import compare
 import argparse
+import subprocess
 
 class BinaryType(Enum):
     CUSTOM = 0
@@ -11,18 +12,26 @@ class BinaryType(Enum):
 @dataclass
 class Bench:
     binary_type: BinaryType = BinaryType.XPDF
+    afl_path: str
     custom_binary_dir: str = None
     time: int
     iterations: int
+    input_dir: str
     output_dir: str
 
     def bench(self):
-        for _ in range(self.iterations):
-            self.exec_fuzz()
+        self.exec_fuzz()
+        # TODO: get output directory from config.yaml and pass to compare
+        compare()
 
     def exec_fuzz(self, output_dir):
-        raise NotImplementedError 
-
+        print("Starting fuzzing process...")
+        for i in range(self.iterations):
+            try:
+                subprocess.run(f"{self.afl_path} -i {self.input_dir} -o {self.output_dir}/{i} -- {self.custom_binary_dir} @@".split(), timeout=self.time+2) # 2 seconds for startup
+            except subprocess.TimeoutExpired:
+                continue
+        print("Completed fuzzing process.")
 
 def main(args):
     Bench(binary_type=args.binary_type, custom_binary_dir=args.custom_binary_dir, time=args.time, iterations=args.iterations, output_dir=args.output_dir)
