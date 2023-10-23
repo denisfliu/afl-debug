@@ -6,6 +6,9 @@ fuzz:
   inputs: 'pdf_examples'
   binary: 'install/bin/pdftotext'
 
+bench:
+  base_folder_path: 'outputs/base'
+
 gdb:
   #breakpoints: ['afl-fuzz-bitmap.c:545']
   breakpoints: ['save_if_interesting']
