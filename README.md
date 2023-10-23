@@ -12,6 +12,7 @@ Xpdf: (mostly following this tutorial https://github.com/antonio-morales/Fuzzing
    - CC=afl-clang-lto ./configure
    - make
    - make install
+
 Sleep
  - GNU coreutils; follow https://github.com/coreutils/coreutils/blob/master/README-hacking
  - Download: git clone https://git.savannah.gnu.org/git/coreutils
@@ -19,6 +20,7 @@ Sleep
    - CC=afl-clang-lto ./configure 
    - make
    - make install
+
 Objdump
  - GNU binutils
  - Download: https://ftp.gnu.org/gnu/binutils/binutils-2.41.tar.gz
