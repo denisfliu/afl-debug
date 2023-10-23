@@ -36,12 +36,10 @@ class Bench:
     # TODO: change this so it's more modular (we will need to implement different exec_fuzz functions for different fuzzers)
     def exec_fuzz(self, output_dir):
         fancy_print(f"Starting fuzzing process for {output_dir}...")
-        for i in range(self.iterations):
-            try:
-                subprocess.run(f"{self.config.afl_path} -i {self.input_dir} -o {output_dir}/{i} -- {self.custom_binary_dir} @@".split(), timeout=self.time+2) # 2 seconds for startup
-            except subprocess.TimeoutExpired:
-                continue
-        fancy_print(f"Completed fuzzing process for {output_dir}.")
+        try:
+            subprocess.run(f"{self.config.afl_path} -i {self.input_dir} -o {output_dir} -- {self.custom_binary_dir} @@".split(), timeout=self.time+2) # 2 seconds for startup
+        except subprocess.TimeoutExpired:
+            fancy_print(f"Completed fuzzing process for {output_dir}.")
 
 def main(args):
     config = get_config()
