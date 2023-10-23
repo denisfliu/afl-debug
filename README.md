@@ -17,7 +17,8 @@ Sleep
  - GNU coreutils; follow https://github.com/coreutils/coreutils/blob/master/README-hacking
  - Download: git clone https://git.savannah.gnu.org/git/coreutils
  - Compile: 
-   - CC=afl-clang-lto ./configure 
+   - ./bootstrap
+   - CC=/AFLplusplus/afl-clang-fast CXX=/AFLplusplus/afl-clang-fast++ ./configure
    - make
    - make install
 
