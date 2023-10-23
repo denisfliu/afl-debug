@@ -9,7 +9,7 @@ Currently using 3 test binaries: Xpdf, sleep, and objdump
 Xpdf: (mostly following this tutorial https://github.com/antonio-morales/Fuzzing101/tree/main/Exercise%201)
  - Download: wget https://dl.xpdfreader.com/old/xpdf-3.02.tar.gz
  - Compile:
-   - CC=afl-clang-lto ./configure
+   - CC=/AFLplusplus/afl-clang-fast CXX=/AFLplusplus/afl-clang-fast++ ./configure
    - make
    - make install
 
