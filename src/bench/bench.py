@@ -17,11 +17,11 @@ class BinaryType(Enum):
 
 @dataclass
 class Bench:
-    binary_type: BinaryType = BinaryType.XPDF
-    custom_binary_dir: str = None
     time: int
     iterations: int
     config: Union[DictConfig, ListConfig]
+    binary_type: BinaryType = BinaryType.XPDF
+    custom_binary_dir: str = None
 
     def bench(self):
         base_path = os.path.join(self.config.fuzz.fuzz_folder, self.config.bench.base_folder_path)
@@ -37,14 +37,15 @@ class Bench:
     def exec_fuzz(self, output_dir):
         fancy_print(f"Starting fuzzing process for {output_dir}...")
         try:
-            subprocess.run(f"{self.config.afl_path} -i {self.input_dir} -o {output_dir} -- {self.custom_binary_dir} @@".split(), timeout=self.time+2) # 2 seconds for startup
+            subprocess.run(f"{self.config.afl_path} -i {self.config.fuzz.inputs} -o {output_dir} -- {self.custom_binary_dir} @@".split(), timeout=self.time+2) # 2 seconds for startup
         except subprocess.TimeoutExpired:
             fancy_print(f"Completed fuzzing process for {output_dir}.")
 
 def main(args):
     config = get_config()
-    Bench(binary_type=args.binary_type, custom_binary_dir=args.custom_binary_dir, time=args.time, iterations=args.iterations, output_dir=args.output_dir, config=config)
-    Bench.bench()
+    b = Bench(binary_type=args.binary_type, custom_binary_dir=args.custom_binary_dir, time=args.time, iterations=args.iterations, config=config)
+    print(b.bench)
+    print(type(b.bench))
     
 
 if __name__ == "__main__":
@@ -58,6 +59,7 @@ if __name__ == "__main__":
         "--output_dir",
         type=str,
         default="[INSERT DEFAULT HERE]",
+        required=False
     )
     args = parser.parse_args()
     main(args)
