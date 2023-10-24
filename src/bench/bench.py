@@ -8,7 +8,7 @@ from enum import Enum
 from typing import Union
 from omegaconf import DictConfig, ListConfig
 
-from src.bench import compare
+from src.bench.compare import compare
 from src.utils import get_config, fancy_print
 
 class BinaryType(Enum):
@@ -35,9 +35,9 @@ class Bench:
             subprocess.run(f"mkdir {output_path}".split())
 
         for i in range(self.iterations):
-            fuzz_path = os.path.join(output_path, f"outputs/bench{i}")
+            fuzz_path = os.path.join(output_path, f"bench{i}")
             self.exec_fuzz(inputs_path, fuzz_path)
-            compare(base_path, fuzz_path)
+            #compare(base_path, fuzz_path) # TODO: do something with the base_path
 
     # TODO: change this so it's more modular (we will need to implement different exec_fuzz functions for different fuzzers)
     def exec_fuzz(self, input_dir, output_dir):
