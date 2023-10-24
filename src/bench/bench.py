@@ -29,25 +29,25 @@ class Bench:
         output_path = os.path.join(self.config.fuzz.fuzz_folder, "outputs")
         inputs_path = os.path.join(self.config.fuzz.fuzz_folder, self.config.fuzz.inputs)
         assert not os.path.exists(os.path.join(output_path, "bench0")), f"Existing benchmark found at {output_path}."
-        assert os.path.exists(inputs_path), f"No valid seeds found at {inputs_path}. Please verify your inputs."
-        assert not os.listdir(inputs_path), f"No valid seeds found at {inputs_path}. Please verify your inputs."
+        assert os.path.exists(inputs_path), f"No input directory found at {inputs_path}. Please verify your inputs."
+        assert os.listdir(inputs_path), f"No valid seeds found at {inputs_path}. Please verify your inputs."
         if not os.path.exists(output_path):
             subprocess.run(f"mkdir {output_path}".split())
 
         for i in range(self.iterations):
             fuzz_path = os.path.join(output_path, f"outputs/bench{i}")
-            self.exec_fuzz(fuzz_path)
+            self.exec_fuzz(inputs_path, fuzz_path)
             compare(base_path, fuzz_path)
 
     # TODO: change this so it's more modular (we will need to implement different exec_fuzz functions for different fuzzers)
-    def exec_fuzz(self, output_dir):
+    def exec_fuzz(self, input_dir, output_dir):
         fancy_print(f"Starting fuzzing process for {self.config.afl_path}...")
         try:
             if self.custom_binary_dir is not None:
-                subprocess.run(f"sudo {self.config.afl_path} -i {self.config.fuzz.inputs} -o {output_dir} -- {self.custom_binary_dir} @@".split(), timeout=self.time+2) # 2 seconds for startup
+                subprocess.run(f"sudo {self.config.afl_path} -i {input_dir} -o {output_dir} -- {self.custom_binary_dir} @@".split(), timeout=self.time+2) # 2 seconds for startup
             else:
                 binary_path = os.path.join(self.config.fuzz.fuzz_folder, self.config.fuzz.binary)
-                subprocess.run(f"sudo {self.config.afl_path} -i {self.config.fuzz.inputs} -o {output_dir} -- {binary_path} @@".split(), timeout=self.time+2) # 2 seconds for startup
+                subprocess.run(f"sudo {self.config.afl_path} -i {input_dir} -o {output_dir} -- {binary_path} @@".split(), timeout=self.time+2) # 2 seconds for startup
         except subprocess.TimeoutExpired:
             fancy_print(f"Completed fuzzing process for {self.config.afl_path}.\nResults in: {output_dir}")
 
