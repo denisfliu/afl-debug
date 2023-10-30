@@ -43,10 +43,11 @@ class Bench:
         assert os.path.exists(os.path.join(base_path, "default")), f"No fuzzing output found for the base run at {base_path}."
         assert os.path.exists(inputs_path), f"No input directory found at {inputs_path}. Please verify your inputs."
         assert os.listdir(inputs_path), f"No valid seeds found at {inputs_path}. Please verify your inputs."
+        # Create parent output directory (for benchmark runs) if it doesn't exist 
         if not os.path.exists(output_path):
             subprocess.run(f"mkdir {output_path}".split())
-        # TODO: Ask for base run
 
+        # Do benchmark runs and save percentage similarities
         for i in range(self.iterations):
             fuzz_path = os.path.join(output_path, f"bench{i}")
             self.exec_fuzz(inputs_path, fuzz_path)
@@ -79,7 +80,6 @@ def main(args):
     config = get_config()
     b = Bench(config=config, binary_type=args.binary_type, time=args.time, iterations=args.iterations, custom_binary_dir=args.custom_binary_dir, base_run=args.base_run, force=args.force)
     b.bench()
-    
 
 if __name__ == "__main__":
     if len(sys.argv) < 7:
