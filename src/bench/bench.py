@@ -26,6 +26,7 @@ class Bench:
     custom_binary_dir: str = None
     base_run: str = None
     force: bool = False
+    write_results: bool = False
     
     def bench(self):
         base_path = self.base_run if self.base_run != None else os.path.join(self.config.fuzz.fuzz_folder, self.config.bench.base_folder_path)
@@ -52,7 +53,9 @@ class Bench:
             fuzz_path = os.path.join(output_path, f"bench{i}")
             self.exec_fuzz(inputs_path, fuzz_path)
             percent, bad, total, _, _ = compare(base_path, fuzz_path)
-            print(f"Percentage similarity: {(1 - percent) * 100}\n")
+            print(f"Benchmark {i}:")
+            print(f"Percentage similarity: {(1 - percent) * 100}%\n\
+                Correct/Total: {total - bad}/{total}\n")
             saved_percentages.append(1 - percent)
         
         # Print out similarities after all iterations completed
@@ -78,7 +81,7 @@ class Bench:
 
 def main(args):
     config = get_config()
-    b = Bench(config=config, binary_type=args.binary_type, time=args.time, iterations=args.iterations, custom_binary_dir=args.custom_binary_dir, base_run=args.base_run, force=args.force)
+    b = Bench(config=config, binary_type=args.binary_type, time=args.time, iterations=args.iterations, custom_binary_dir=args.custom_binary_dir, base_run=args.base_run, force=args.force, write_results=args.write_results)
     b.bench()
 
 if __name__ == "__main__":
@@ -101,6 +104,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("-r", "--base_run", type=str, required=False)
     parser.add_argument("-f", "--force", action='store_true', required=False)
+    parser.add_argument("-w", "--write_results", action='store_false', required=False)
     args = parser.parse_args()
     # print(args)
     main(args)
