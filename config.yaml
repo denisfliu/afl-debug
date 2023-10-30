@@ -1,10 +1,10 @@
-afl_path: '/home/denis/AFLplusplus/afl-fuzz'
+afl_path: '/AFLplusplus/afl-fuzz'
 debug_mode: 'Line'
 
 fuzz:
-  fuzz_folder: '/home/denis/Thesis/fuzzing_xpdf'
-  inputs: 'pdf_examples'
-  binary: 'install/bin/pdftotext'
+  fuzz_folder: '/home/sefcom/TestBinaries/fuzzing_xpdf'
+  inputs: 'inputs/'
+  binary: 'pdftotext'
 
 bench:
   base_folder_path: 'outputs/base'

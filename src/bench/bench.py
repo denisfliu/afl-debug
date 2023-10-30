@@ -24,7 +24,7 @@ class Bench:
     config: Union[DictConfig, ListConfig]
     binary_type: BinaryType = BinaryType.XPDF
     custom_binary_dir: str = None
-
+    
     def bench(self):
         base_path = os.path.join(self.config.fuzz.fuzz_folder, self.config.bench.base_folder_path)
         output_path = os.path.join(self.config.fuzz.fuzz_folder, "outputs")
@@ -46,18 +46,17 @@ class Bench:
         fancy_print(f"Starting fuzzing process for {self.config.fuzz.binary}...")
         try:
             if self.custom_binary_dir is not None:
-                subprocess.run(f"sudo {self.config.afl_path} -i {input_dir} -o {output_dir} -- {self.custom_binary_dir} @@".split(), timeout=self.time+2) # 2 seconds for startup
+                subprocess.run(f"{self.config.afl_path} -i {input_dir} -o {output_dir} -- {self.custom_binary_dir} @@".split(), timeout=self.time+2) # 2 seconds for startup
             else:
                 binary_path = os.path.join(self.config.fuzz.fuzz_folder, self.config.fuzz.binary)
-                subprocess.run(f"sudo {self.config.afl_path} -i {input_dir} -o {output_dir} -- {binary_path} @@".split(), timeout=self.time+2) # 2 seconds for startup
+                subprocess.run(f"{self.config.afl_path} -i {input_dir} -o {output_dir} -- {binary_path} @@".split(), timeout=self.time+2) # 2 seconds for startup
         except subprocess.TimeoutExpired:
             fancy_print(f"Completed fuzzing process for {self.config.fuzz.binary}.\nResults in: {output_dir}")
 
 def main(args):
     config = get_config()
     b = Bench(binary_type=args.binary_type, custom_binary_dir=args.custom_binary_dir, time=args.time, iterations=args.iterations, config=config)
-    print(b.bench)
-    print(type(b.bench))
+    b.bench()
     
 
 if __name__ == "__main__":
