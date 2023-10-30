@@ -28,24 +28,24 @@ class Bench:
     force: bool = False
     
     def bench(self):
-        base_path = os.path.join(self.config.fuzz.fuzz_folder, self.config.bench.base_folder_path)
+        base_path = self.base_run if self.base_run != None else os.path.join(self.config.fuzz.fuzz_folder, self.config.bench.base_folder_path)
         output_path = os.path.join(self.config.fuzz.fuzz_folder, self.config.bench.output_path)
         inputs_path = os.path.join(self.config.fuzz.fuzz_folder, self.config.fuzz.inputs)
         results_file = os.path.join(output_path, self.config.bench.output_file)
         saved_percentages = []
         
+        # Delete benchmark runs if they exist (AFL++ won't run otherwise)
         if os.path.exists(os.path.join(output_path, "bench0")) and self.force:
-            # Delete benchmark runs if they exist (AFL++ won't run otherwise)
             for i in range(self.iterations):
                 bench_path = os.path.join(output_path, f"bench{i}")
                 subprocess.run(f"rm -r {bench_path}".split())
         assert not os.path.exists(os.path.join(output_path, "bench0")), f"Existing benchmark found at {output_path}. Use --force to overwrite it."
-        assert os.path.exists(base_path), f"No fuzzing output found for the base run at {base_path}."
+        assert os.path.exists(os.path.join(base_path, "default")), f"No fuzzing output found for the base run at {base_path}."
         assert os.path.exists(inputs_path), f"No input directory found at {inputs_path}. Please verify your inputs."
         assert os.listdir(inputs_path), f"No valid seeds found at {inputs_path}. Please verify your inputs."
-        # TODO: Ask for base run
         if not os.path.exists(output_path):
             subprocess.run(f"mkdir {output_path}".split())
+        # TODO: Ask for base run
 
         for i in range(self.iterations):
             fuzz_path = os.path.join(output_path, f"bench{i}")
