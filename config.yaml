@@ -7,7 +7,9 @@ fuzz:
   binary: 'pdftotext'
 
 bench:
+  output_path: 'outputs/'
   base_folder_path: 'outputs/base'
+  output_file: 'results.txt'
 
 gdb:
   #breakpoints: ['afl-fuzz-bitmap.c:545']
