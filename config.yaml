@@ -1,4 +1,4 @@
-afl_path: '/AFLplusplus/afl-fuzz'
+afl_path: '/home/sefcom/AFLplusplus/afl-fuzz'
 debug_mode: 'Line'
 
 fuzz:
@@ -7,8 +7,8 @@ fuzz:
   binary: 'pdftotext'
 
 bench:
-  output_path: 'outputs/'
-  base_folder_path: 'outputs/base'
+  output_path: '/home/sefcom/TestBinaries/fuzzing_xpdf/outputs'
+  base_folder_path: '/home/sefcom/TestBinaries/fuzzing_xpdf/outputs/base'
   output_file: 'results.txt'
 
 gdb:
