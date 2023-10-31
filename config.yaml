@@ -7,12 +7,24 @@ fuzz:
   binary: 'pdftotext'
 
 bench:
-  output_path: '/home/sefcom/TestBinaries/fuzzing_xpdf/outputs'
-  base_folder_path: '/home/sefcom/TestBinaries/fuzzing_xpdf/outputs/base'
   output_file: 'results.txt'
-  xpdf_path: ''
-  sleep_path: ''
-  objdump_path: ''
+  time: 120
+  iterations: 2
+  xpdf:
+    bin_path: '/home/sefcom/TestBinaries/fuzzing_xpdf/pdftotext'
+    base_path: '/home/sefcom/TestBinaries/fuzzing_xpdf/outputs/base'
+    output_path: '/home/sefcom/TestBinaries/fuzzing_xpdf/outputs'
+    input_path: '/home/sefcom/TestBinaries/fuzzing_xpdf/inputs'
+  sleep:
+    bin_path: '/home/sefcom/TestBinaries/fuzzing_sleep/sleep'
+    base_path: '/home/sefcom/TestBinaries/fuzzing_sleep/outputs/base'
+    output_path: '/home/sefcom/TestBinaries/fuzzing_sleep/outputs'
+    input_path: '/home/sefcom/TestBinaries/fuzzing_sleep/inputs'
+  objdump:
+    bin_path: '/home/sefcom/TestBinaries/fuzzing_objdump/objdump'
+    base_path: '/home/sefcom/TestBinaries/fuzzing_objdump/outputs/base'
+    output_path: '/home/sefcom/TestBinaries/fuzzing_objdump/outputs'
+    input_path: '/home/sefcom/TestBinaries/fuzzing_objdump/inputs'
 
 gdb:
   #breakpoints: ['afl-fuzz-bitmap.c:545']
