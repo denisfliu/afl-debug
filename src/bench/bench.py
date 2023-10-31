@@ -12,17 +12,9 @@ from src.bench.compare import compare
 from src.utils import get_config, fancy_print
 
 
-class BinaryType(Enum):
-    CUSTOM = 0
-    XPDF = 1
-    SLEEP = 2
-    OBJDUMP = 3
-
-
 @dataclass
 class Bench:
     config: Union[DictConfig, ListConfig]
-    binary_type: BinaryType
     time: int
     iterations: int
     custom_binary_dir: str = None
@@ -97,15 +89,7 @@ class Bench:
         try:
             if self.custom_binary_dir is not None:
                 subprocess.run(
-                    f"{self.config.afl_path} -i {input_dir} -o {output_dir} -- {self.custom_binary_dir} @@".split(),
-                    timeout=self.time + 2,
-                )  # 2 seconds for startup
-            else:
-                binary_path = os.path.join(
-                    self.config.fuzz.fuzz_folder, self.config.fuzz.binary
-                )
-                subprocess.run(
-                    f"{self.config.afl_path} -i {input_dir} -o {output_dir} -- {binary_path} @@".split(),
+                    f"{self.config.afl_path} -i {input_dir} -o {output_dir} -r {self.base_run} -- {self.custom_binary_dir} @@".split(),
                     timeout=self.time + 2,
                 )  # 2 seconds for startup
         except subprocess.TimeoutExpired:
@@ -118,7 +102,6 @@ def main(args):
     config = get_config()
     b = Bench(
         config=config,
-        binary_type=args.binary_type,
         time=args.time,
         iterations=args.iterations,
         custom_binary_dir=args.custom_binary_dir,
@@ -130,18 +113,17 @@ def main(args):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 7:
+    if len(sys.argv) < 5:
         print(
-            "Usage: python -m src.bench.bench -b [# of binary] -t [time] -i [iterations]"
+            "Usage: python -m src.bench.bench -b [binary dir] -t [time] -i [iterations]"
         )
         print("Binaries supported:")
         sys.exit(1)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("-b", "--binary_type", type=int, required=True)
     parser.add_argument("-t", "--time", type=int, required=True)
     parser.add_argument("-i", "--iterations", type=int, required=True)
-    parser.add_argument("-c", "--custom_binary_dir", type=str, required=False)
+    parser.add_argument("-b", "--binary_dir", type=str, required=False)
     parser.add_argument(
         "-o", "--output_dir", type=str, default="~/outputs/", required=False
     )

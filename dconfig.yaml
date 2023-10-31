@@ -1,0 +1,25 @@
+afl_path: '/home/denis/AFLplusplus/afl-fuzz'
+debug_mode: 'Line'
+
+fuzz:
+  fuzz_folder: '/home/denis/Thesis/fuzzing_xpdf'
+  inputs: 'pdf_examples'
+  binary: 'install/bin/pdftotext'
+
+bench:
+  base_folder_path: 'outputs/base'
+
+gdb:
+  #breakpoints: ['afl-fuzz-bitmap.c:545']
+  breakpoints: ['save_if_interesting']
+  log_path: 'default/replay/check.txt'
+  base_folder_path: 'outputs/unseed'
+  replay_folder_path: 'outputs/line'
+  replay:
+    log_increment: 200
+  line:
+    line_stop: 988264
+  seed:
+    seed_comparator: 'SeedComparatorBase'
+    target_path: 'outputs/unseed/target'
+    max_distance: 150

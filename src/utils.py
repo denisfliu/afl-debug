@@ -1,9 +1,12 @@
+import os
 from omegaconf import OmegaConf
 
 
 def get_config():
-    config_path = "config.yaml"
-    return OmegaConf.load(config_path)
+    if os.path.exists("/home/denis"):
+        return OmegaConf.load("dconfig.yaml")
+    return OmegaConf.load("config.yaml")
+
 
 def fancy_print(s: str):
     print("-" * 15)
