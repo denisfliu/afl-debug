@@ -10,6 +10,9 @@ bench:
   output_path: '/home/sefcom/TestBinaries/fuzzing_xpdf/outputs'
   base_folder_path: '/home/sefcom/TestBinaries/fuzzing_xpdf/outputs/base'
   output_file: 'results.txt'
+  xpdf_path: ''
+  sleep_path: ''
+  objdump_path: ''
 
 gdb:
   #breakpoints: ['afl-fuzz-bitmap.c:545']

@@ -12,6 +12,13 @@ from src.bench.compare import compare
 from src.utils import get_config, fancy_print
 
 
+class BinaryType(Enum):
+    CUSTOM = 0
+    XPDF = 1
+    SLEEP = 2
+    OBJDUMP = 3
+
+
 @dataclass
 class Bench:
     config: Union[DictConfig, ListConfig]
@@ -22,17 +29,26 @@ class Bench:
     force: bool = False
     write_results: bool = False
 
+    def __post_init__(self):
+        if self.binary_dir.lower() == "xpdf":
+            self.binary_type = BinaryType.XPDF
+            self.binary_dir = self.config.bench.xpdf_path
+        elif self.binary_dir.lower() == "sleep":
+            self.binary_type = BinaryType.SLEEP
+            self.binary_dir = self.config.bench.sleep_path
+        elif self.binary_dir.lower() == "objdump":
+            self.binary_type = BinaryType.OBJDUMP
+            self.binary_dir = self.config.bench.objdump_path
+        else:
+            self.binary_type = BinaryType.CUSTOM
+
     def bench(self):
         self.base_run = (
             self.base_run
             if self.base_run is not None
-            else os.path.join(
-                self.config.bench.base_folder_path
-            )
+            else os.path.join(self.config.bench.base_folder_path)
         )
-        output_path = os.path.join(
-            self.config.bench.output_path
-        )
+        output_path = os.path.join(self.config.bench.output_path)
         inputs_path = os.path.join(
             self.config.fuzz.fuzz_folder, self.config.fuzz.inputs
         )
@@ -78,7 +94,9 @@ class Bench:
             f.write("-" * 15 + "\nPERCENTAGE SIMILARITY\n" + "-" * 15 + "\n")
             for i in range(self.iterations):
                 iter_path = os.path.join(output_path, f"bench{i}")
-                print(f"{self.base_run} vs. {iter_path}: {saved_percentages[i]*100:.3f}%")
+                print(
+                    f"{self.base_run} vs. {iter_path}: {saved_percentages[i]*100:.3f}%"
+                )
                 f.write(
                     f"{self.base_run} vs. {iter_path}: {saved_percentages[i]*100:.3f}%\n"
                 )
@@ -87,10 +105,17 @@ class Bench:
     def exec_fuzz(self, input_dir, output_dir):
         fancy_print(f"Starting fuzzing process for {self.config.fuzz.binary}...")
         try:
-            subprocess.run(
-                f"{self.config.afl_path} -i {input_dir} -o {output_dir} -r {self.base_run} -- {self.binary_dir} @@".split(),
-                timeout=self.time + 2,
-            )  # 2 seconds for startup
+            if self.binary_type == BinaryType.OBJDUMP:
+                # TODO FIX
+                subprocess.run(
+                    f"{self.config.afl_path} -i {input_dir} -o {output_dir} -r {self.base_run} -- {self.binary_dir} @@".split(),
+                    timeout=self.time + 2,
+                )  # 2 seconds for startup
+            else:
+                subprocess.run(
+                    f"{self.config.afl_path} -i {input_dir} -o {output_dir} -r {self.base_run} -- {self.binary_dir} @@".split(),
+                    timeout=self.time + 2,
+                )  # 2 seconds for startup
         except subprocess.TimeoutExpired:
             fancy_print(
                 f"Completed fuzzing process for {self.config.fuzz.binary}.\nResults in: {output_dir}"
