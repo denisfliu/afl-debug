@@ -23,7 +23,7 @@ Sleep
  - Compile: 
 ```
 ./bootstrap
-CC=afl-clang-lto ./configure --prefix="$HOME/TestBinaries/fuzzing_sleep/install"
+CC=/AFLplusplus/afl-clang-fast CXX=/AFLplusplus/afl-clang-fast++ ./configure --prefix="$HOME/TestBinaries/fuzzing_sleep/install"
 make src/sleep
 ```
 (`sleep` located in `src` directory)
