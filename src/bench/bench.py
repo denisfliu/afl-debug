@@ -17,21 +17,21 @@ class Bench:
     config: Union[DictConfig, ListConfig]
     time: int
     iterations: int
-    custom_binary_dir: str = None
+    binary_dir: str = None
     base_run: str = None
     force: bool = False
     write_results: bool = False
 
     def bench(self):
-        base_path = (
+        self.base_run = (
             self.base_run
-            if self.base_run != None
+            if self.base_run is not None
             else os.path.join(
-                self.config.fuzz.fuzz_folder, self.config.bench.base_folder_path
+                self.config.bench.base_folder_path
             )
         )
         output_path = os.path.join(
-            self.config.fuzz.fuzz_folder, self.config.bench.output_path
+            self.config.bench.output_path
         )
         inputs_path = os.path.join(
             self.config.fuzz.fuzz_folder, self.config.fuzz.inputs
@@ -48,8 +48,8 @@ class Bench:
             os.path.join(output_path, "bench0")
         ), f"Existing benchmark found at {output_path}. Use --force to overwrite it."
         assert os.path.exists(
-            os.path.join(base_path, "default")
-        ), f"No fuzzing output found for the base run at {base_path}."
+            os.path.join(self.base_run, "default")
+        ), f"No fuzzing output found for the base run at {self.base_run}."
         assert os.path.exists(
             inputs_path
         ), f"No input directory found at {inputs_path}. Please verify your inputs."
@@ -64,7 +64,7 @@ class Bench:
         for i in range(self.iterations):
             fuzz_path = os.path.join(output_path, f"bench{i}")
             self.exec_fuzz(inputs_path, fuzz_path)
-            percent, bad, total, _, _ = compare(base_path, fuzz_path)
+            percent, bad, total, _, _ = compare(self.base_run, fuzz_path)
             print(f"Benchmark {i}:")
             print(
                 f"Percentage similarity: {(1 - percent) * 100}%\n\
@@ -78,20 +78,19 @@ class Bench:
             f.write("-" * 15 + "\nPERCENTAGE SIMILARITY\n" + "-" * 15 + "\n")
             for i in range(self.iterations):
                 iter_path = os.path.join(output_path, f"bench{i}")
-                print(f"{base_path} vs. {iter_path}: {saved_percentages[i]*100:.3f}%")
+                print(f"{self.base_run} vs. {iter_path}: {saved_percentages[i]*100:.3f}%")
                 f.write(
-                    f"{base_path} vs. {iter_path}: {saved_percentages[i]*100:.3f}%\n"
+                    f"{self.base_run} vs. {iter_path}: {saved_percentages[i]*100:.3f}%\n"
                 )
 
     # TODO: change this so it's more modular (we will need to implement different exec_fuzz functions for different fuzzers)
     def exec_fuzz(self, input_dir, output_dir):
         fancy_print(f"Starting fuzzing process for {self.config.fuzz.binary}...")
         try:
-            if self.custom_binary_dir is not None:
-                subprocess.run(
-                    f"{self.config.afl_path} -i {input_dir} -o {output_dir} -r {self.base_run} -- {self.custom_binary_dir} @@".split(),
-                    timeout=self.time + 2,
-                )  # 2 seconds for startup
+            subprocess.run(
+                f"{self.config.afl_path} -i {input_dir} -o {output_dir} -r {self.base_run} -- {self.binary_dir} @@".split(),
+                timeout=self.time + 2,
+            )  # 2 seconds for startup
         except subprocess.TimeoutExpired:
             fancy_print(
                 f"Completed fuzzing process for {self.config.fuzz.binary}.\nResults in: {output_dir}"
@@ -104,11 +103,13 @@ def main(args):
         config=config,
         time=args.time,
         iterations=args.iterations,
-        custom_binary_dir=args.custom_binary_dir,
+        binary_dir=args.binary_dir,
         base_run=args.base_run,
         force=args.force,
         write_results=args.write_results,
     )
+    # print(b)
+    # print("!!!", b.binary_dir)
     b.bench()
 
 
@@ -123,7 +124,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--time", type=int, required=True)
     parser.add_argument("-i", "--iterations", type=int, required=True)
-    parser.add_argument("-b", "--binary_dir", type=str, required=False)
+    parser.add_argument("-b", "--binary_dir", type=str, required=True)
     parser.add_argument(
         "-o", "--output_dir", type=str, default="~/outputs/", required=False
     )
