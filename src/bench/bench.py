@@ -24,10 +24,10 @@ class Bench:
     config: Union[DictConfig, ListConfig]
     time: int
     iterations: int
-    binary_dir: str = None
-    base_dir: str = None
-    output_dir: str = None
-    input_dir: str = None
+    binary_dir: str
+    base_dir: str
+    output_dir: str
+    input_dir: str
     force: bool = False
     write_results: bool = False
 
@@ -35,21 +35,30 @@ class Bench:
         if self.binary_dir.lower() == "xpdf":
             self.binary_type = BinaryType.XPDF
             self.binary_dir = self.config.bench.xpdf.bin_path
-            self.base_dir = self.config.bench.xpdf.base_path
-            self.output_dir = self.config.bench.xpdf.output_path
-            self.input_dir = self.config.bench.xpdf.input_path
+            if self.base_dir is None:
+                self.base_dir = self.config.bench.xpdf.base_path
+            if self.output_dir is None:
+                self.output_dir = self.config.bench.xpdf.output_path
+            if self.input_dir is None:
+                self.input_dir = self.config.bench.xpdf.input_path
         elif self.binary_dir.lower() == "sleep":
             self.binary_type = BinaryType.SLEEP
             self.binary_dir = self.config.bench.sleep.bin_path
-            self.base_dir = self.config.bench.sleep.base_path
-            self.output_dir = self.config.bench.sleep.output_path
-            self.input_dir = self.config.bench.sleep.input_path
+            if self.base_dir is None:
+                self.base_dir = self.config.bench.sleep.base_path
+            if self.output_dir is None:
+                self.output_dir = self.config.bench.sleep.output_path
+            if self.input_dir is None:
+                self.input_dir = self.config.bench.sleep.input_path
         elif self.binary_dir.lower() == "objdump":
             self.binary_type = BinaryType.OBJDUMP
             self.binary_dir = self.config.bench.objdump.bin_path
-            self.base_dir = self.config.bench.objdump.base_path
-            self.output_dir = self.config.bench.objdump.output_path
-            self.input_dir = self.config.bench.objdump.input_path
+            if self.base_dir is None:
+                self.base_dir = self.config.bench.objdump.base_path
+            if self.output_dir is None:
+                self.output_dir = self.config.bench.objdump.output_path
+            if self.input_dir is None:
+                self.input_dir = self.config.bench.objdump.input_path
         else:
             self.binary_type = BinaryType.CUSTOM
         
@@ -128,11 +137,12 @@ class Bench:
 
 
 def main(args):
+    print(args)
     config = get_config()
     b = Bench(
         config=config,
-        time=config.bench.time,
-        iterations=config.bench.iterations,
+        time=(args.time if args.time is not None else config.bench.time),
+        iterations=(args.iterations if args.iterations is not None else config.bench.iterations),
         binary_dir=args.binary_dir,
         base_dir=args.base_dir,
         output_dir=args.output_dir,
@@ -163,7 +173,7 @@ if __name__ == "__main__":
     parser.add_argument("-i", "--iterations", type=int, required=False)
     parser.add_argument("-p", "--binary_dir", type=str, required=True)
     parser.add_argument("-b", "--base_dir", type=str, required=False)
-    parser.add_argument("-o", "--output_dir", type=str, default="~/outputs/", required=False)
+    parser.add_argument("-o", "--output_dir", type=str, required=False)
     parser.add_argument("-s", "--input_dir", type=str, required=False)
     parser.add_argument("-f", "--force", action="store_true", required=False)
     parser.add_argument("-w", "--write_results", action="store_false", required=False)
