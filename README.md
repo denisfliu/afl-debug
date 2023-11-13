@@ -1,7 +1,9 @@
 # AFL++ Debug
 Trying to automate debugging using the partial replayability I've written for AFL++.
 
-TODO: formatter
+TODO: Write LD_PRELOAD stuff. Write AFL++ launcher which can automatically load our LD_PRELOAD stuff. Should be able to be used from benchmark framework as well as in isolation.
+TODO: make a makefile for components/
+TODO: Cheese a way to initialize the seed to what we want
 
 ## AFL++ Benchmark
 Currently using 3 test binaries: Xpdf (pdftotext), sleep, and objdump
