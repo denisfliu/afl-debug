@@ -19,6 +19,6 @@ int main(int argc, char** argv) {
     int bytes_read = read(fd, buf, num_bytes);
     printf("Returned %d\n", bytes_read);
 
-    printf("Read %d bytes: %s", bytes_read, buf);
+    printf("Read %d bytes: %s\n", bytes_read, buf);
     return 0;
 }
