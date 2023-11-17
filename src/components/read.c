@@ -100,7 +100,7 @@ int open(const char *pathname, int flags, ...)
         urandom_fd = res;
         needs_read_fd = 0;
 
-        char* tmp = "/tmp/replay.bin";
+        char* tmp = "/tmp/replay.rep";
         rand_below_fd = original_open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
     }
     return res;
@@ -125,7 +125,7 @@ int gettimeofday(struct timeval *tp, void *tzp)
     if (unlikely(needs_time_fd)) {
         needs_time_fd = 0;
 
-        char* tmp = "/tmp/time.bin";
+        char* tmp = "/tmp/time.rep";
         time_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
     }
 

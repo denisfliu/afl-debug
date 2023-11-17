@@ -34,38 +34,37 @@ class Bench:
     def __post_init__(self):
         if self.binary_dir.lower() == "xpdf":
             self.binary_type = BinaryType.XPDF
-            self.binary_dir = self.config.bench.xpdf.bin_path
-            if self.base_dir is None:
-                self.base_dir = self.config.bench.xpdf.base_path
-            if self.output_dir is None:
-                self.output_dir = self.config.bench.xpdf.output_path
-            if self.input_dir is None:
-                self.input_dir = self.config.bench.xpdf.input_path
+            bin_config = self.config.bench.xpdf
         elif self.binary_dir.lower() == "sleep":
             self.binary_type = BinaryType.SLEEP
-            self.binary_dir = self.config.bench.sleep.bin_path
-            if self.base_dir is None:
-                self.base_dir = self.config.bench.sleep.base_path
-            if self.output_dir is None:
-                self.output_dir = self.config.bench.sleep.output_path
-            if self.input_dir is None:
-                self.input_dir = self.config.bench.sleep.input_path
+            bin_config = self.config.bench.sleep
         elif self.binary_dir.lower() == "objdump":
             self.binary_type = BinaryType.OBJDUMP
-            self.binary_dir = self.config.bench.objdump.bin_path
-            if self.base_dir is None:
-                self.base_dir = self.config.bench.objdump.base_path
-            if self.output_dir is None:
-                self.output_dir = self.config.bench.objdump.output_path
-            if self.input_dir is None:
-                self.input_dir = self.config.bench.objdump.input_path
+            bin_config = self.config.bench.objdump
         else:
             self.binary_type = BinaryType.CUSTOM
-        
-        assert self.binary_dir is not None, "binary_dir cannot be None; must be specified by either config.yaml or input flags"
-        assert self.base_dir is not None, "base_dir cannot be None; must be specified by either config.yaml or input flags"
-        assert self.output_dir is not None, "output_dir cannot be None; must be specified by either config.yaml or input flags"
-        assert self.input_dir is not None, "input_dir cannot be None; must be specified by either config.yaml or input flags"
+
+        if self.binary_type != BinaryType.CUSTOM:
+            self.binary_dir = bin_config.bin_path
+            if self.base_dir is None:
+                self.base_dir = bin_config.base_path
+            if self.output_dir is None:
+                self.output_dir = bin_config.output_path
+            if self.input_dir is None:
+                self.input_dir = bin_config.input_path
+
+        assert (
+            self.binary_dir is not None
+        ), "binary_dir cannot be None; must be specified by either config.yaml or input flags"
+        assert (
+            self.base_dir is not None
+        ), "base_dir cannot be None; must be specified by either config.yaml or input flags"
+        assert (
+            self.output_dir is not None
+        ), "output_dir cannot be None; must be specified by either config.yaml or input flags"
+        assert (
+            self.input_dir is not None
+        ), "input_dir cannot be None; must be specified by either config.yaml or input flags"
 
     def bench(self):
         saved_percentages = []
@@ -142,7 +141,9 @@ def main(args):
     b = Bench(
         config=config,
         time=(args.time if args.time is not None else config.bench.time),
-        iterations=(args.iterations if args.iterations is not None else config.bench.iterations),
+        iterations=(
+            args.iterations if args.iterations is not None else config.bench.iterations
+        ),
         binary_dir=args.binary_dir,
         base_dir=args.base_dir,
         output_dir=args.output_dir,
@@ -162,9 +163,13 @@ if __name__ == "__main__":
         print("-p, --binary_dir : path to the program/binary fuzzed")
         print("-b, --base_dir : path to the base fuzz run directory")
         print("-o, --output_dir : path to the directory to place the benchmark runs in")
-        print("-s, --input_dir : path to the directory with the seeds used in the base run")
+        print(
+            "-s, --input_dir : path to the directory with the seeds used in the base run"
+        )
         print("-f, --force : use the force flag to remove existing benchmark runs")
-        print("-w, --write_results : write the similarity percentages to a file in output_dir")
+        print(
+            "-w, --write_results : write the similarity percentages to a file in output_dir"
+        )
         print("Binaries supported:")
         sys.exit(1)
 

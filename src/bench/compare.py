@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
-
+import argparse
 import sys
 import os
 import glob
 
+from src.bench.compare import compare
+
 PATH = "default/queue"
 FILETEMPLATE = "id:"
-
-dir1 = sys.argv[1]
-dir2 = sys.argv[2]
 
 
 def getfile(directory, number):
@@ -73,14 +72,22 @@ def print_files(files, prefix):
         print(f"{prefix} {i}:\n{f1}\n{f2}\n")
 
 
-def main():
+def main(args):
+    """
     percentage, unidentical, total, files, first_files = compare(dir1, dir2)
     print(f"{unidentical} files differ out of {total} files\n")
     # print_files(first_files, 'File')
     # if percentage < .05:
     #    print_files(files, 'Difference')
     # print(f'{percentage * 100} percent of files differ')
+    """
+    print(compare(args.dir_a, args.dir_b))
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-a", "--dir_a", type=str, required=True)
+    parser.add_argument("-b", "--dir_b", type=str, default="~/outputs/", required=False)
+    args = parser.parse_args()
+    # print(args)
+    main(args)
