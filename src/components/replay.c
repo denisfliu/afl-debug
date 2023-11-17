@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 // Some copied macros from AFL++
 #define my_ck_write(fd, buf, len, fn)                                                   \
@@ -109,7 +110,7 @@ ssize_t read(int fildes, void *buf, size_t nbyte)
     ssize_t (*original_read)(int, void *, size_t);
     ssize_t res;
 
-    if (unlikely(fildes == urandom_fd)) {
+    if (unlikely(fildes == rand_below_fd)) {
         my_ck_read(rand_below_fd, &res, sizeof(AFL_RAND_RETURN), "urandom");
     } else {
       original_read = dlsym(RTLD_NEXT, "read");
@@ -126,6 +127,6 @@ int gettimeofday(struct timeval *tp, void *tzp)
         char* tmp = "/tmp/time.rep";
         time_fd = open(tmp, O_RDONLY);
     }
-    my_ck_read(time_fd, &tp, sizeof(tp), "gettimeofday")
+    my_ck_read(time_fd, &tp, sizeof(tp), "gettimeofday");
     return 1;
 }

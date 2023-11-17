@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/time.h>
 
 // Some copied macros from AFL++
 #define my_ck_write(fd, buf, len, fn)                                                   \
@@ -109,7 +110,7 @@ ssize_t read(int fildes, void *buf, size_t nbyte)
     ssize_t (*original_read)(int, void *, size_t);
     original_read = dlsym(RTLD_NEXT, "read");
     ssize_t res = (*original_read)(fildes, buf, nbyte);
-    if (fildes == urandom_fd) {
+    if (fildes == rand_below_fd) {
         printf("### DETECTED /dev/urandom ### ");
         // my_ck_write(rand_below_fd, &res, sizeof(AFL_RAND_RETURN), "rand_below_thing");
     }
