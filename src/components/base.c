@@ -9,6 +9,7 @@
 #include <sys/time.h>
 
 // Some copied macros from AFL++
+/*
 #define my_ck_write(fd, buf, len, fn)                                                   \
     do                                                                                  \
     {                                                                                   \
@@ -59,7 +60,7 @@
             RPFATAL(_res, "Short read from %s", fn); \
                                                      \
     } while (0)
-
+*/
 #if __GNUC__ < 6
   #ifndef likely
     #define likely(_x) (_x)
@@ -86,6 +87,7 @@
 int needs_read_fd = 1;
 int needs_time_fd = 1;
 int32_t rand_below_fd;
+int32_t urandom_fd;
 int32_t time_fd;
 
 int open(const char *pathname, int flags, ...)
@@ -96,7 +98,7 @@ int open(const char *pathname, int flags, ...)
     if (unlikely(needs_read_fd) && strcmp(pathname, "/dev/urandom") == 0)
     {
         printf("### DETECTED /dev/urandom ### ");
-        rand_below_fd = res;
+        urandom_fd = res;
         needs_read_fd = 0;
 
         char* tmp = "/tmp/replay.rep";
@@ -110,9 +112,9 @@ ssize_t read(int fildes, void *buf, size_t nbyte)
     ssize_t (*original_read)(int, void *, size_t);
     original_read = dlsym(RTLD_NEXT, "read");
     ssize_t res = (*original_read)(fildes, buf, nbyte);
-    if (fildes == rand_below_fd) {
+    if (fildes == urandom_fd) {
         printf("### DETECTED /dev/urandom ### ");
-        // my_ck_write(rand_below_fd, &res, sizeof(AFL_RAND_RETURN), "rand_below_thing");
+        my_ck_write(rand_below_fd, &res, sizeof(AFL_RAND_RETURN), "rand_below_thing");
     }
     return res;
 }
@@ -129,6 +131,6 @@ int gettimeofday(struct timeval *tp, void *tzp)
     }
 
     int res = (*original_gettimeofday)(tp, tzp);
-    my_ck_write(time_fd, &tp, sizeof(tp), "gettimeofday");
+    // my_ck_write(time_fd, &tp, sizeof(tp), "gettimeofday");
     return res;
 }
