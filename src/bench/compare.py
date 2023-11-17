@@ -4,8 +4,6 @@ import sys
 import os
 import glob
 
-from src.bench.compare import compare
-
 PATH = "default/queue"
 FILETEMPLATE = "id:"
 

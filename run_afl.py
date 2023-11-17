@@ -32,7 +32,7 @@ def main(args):
         raise NotImplementedError
 
         delete_metata_in_tmp()
-        if args.do_compare:
+        if args.print_compare:
             percent, bad, total, _, _ = compare(args.base_dir, afl_output_dir)
             fancy_print(
                 f"Percentage similarity: {(1 - percent) * 100}%\nCorrect/Total: {total - bad}/{total}\n"
@@ -46,7 +46,7 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-r", "--is_replay", action="store_true")
-    parser.add_argument("-c", "--do_compare", action="store_true")
+    parser.add_argument("-p", "--print_compare", action="store_true")
     parser.add_argument(
         "-b",
         "--base_dir",
@@ -54,7 +54,7 @@ if __name__ == "__main__":
         default="INSERT BETTER DEFAULT HERE",
     )
     parser.add_argument(
-        "c",
+        "-c",
         "--fuzz_command",
         type=str,
         default="INSERT BETTER DEFAULT HERE",
