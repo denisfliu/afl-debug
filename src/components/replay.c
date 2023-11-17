@@ -82,8 +82,6 @@
 #endif
 
 
-// Note, I wrote this above timeofday thing: save into file, python afl plus plus executor should be able to then copy that metadata into the expected output folder as we want
-int urandom_fd = -1; // TODO: need to check if this urandom_fd works
 int needs_read_fd = 1;
 int needs_time_fd = 1;
 int32_t rand_below_fd;
@@ -97,11 +95,11 @@ int open(const char *pathname, int flags, ...)
     if (unlikely(needs_read_fd) && strcmp(pathname, "/dev/urandom") == 0)
     {
         printf("### DETECTED /dev/urandom ### ");
-        urandom_fd = res;
+        rand_below_fd = res;
         needs_read_fd = 0;
 
         char* tmp = "/tmp/replay.rep";
-        rand_below_fd = original_open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
+        rand_below_fd = original_open(tmp, O_RDONLY);
     }
     return res;
 }
@@ -109,27 +107,25 @@ int open(const char *pathname, int flags, ...)
 ssize_t read(int fildes, void *buf, size_t nbyte)
 {
     ssize_t (*original_read)(int, void *, size_t);
-    original_read = dlsym(RTLD_NEXT, "read");
-    ssize_t res = (*original_read)(fildes, buf, nbyte);
-    if (fildes == urandom_fd) {
-        printf("### DETECTED /dev/urandom ### ");
-        // my_ck_write(rand_below_fd, &res, sizeof(AFL_RAND_RETURN), "rand_below_thing");
+    ssize_t res;
+
+    if (unlikely(fildes == urandom_fd)) {
+        my_ck_read(rand_below_fd, &res, sizeof(AFL_RAND_RETURN), "urandom");
+    } else {
+      original_read = dlsym(RTLD_NEXT, "read");
+      res = (*original_read)(fildes, buf, nbyte);
     }
     return res;
 }
 
 int gettimeofday(struct timeval *tp, void *tzp)
 {
-    int (*original_gettimeofday)(struct timeval *, void *);
-    original_gettimeofday = dlsym(RTLD_NEXT, "gettimeofday");
     if (unlikely(needs_time_fd)) {
         needs_time_fd = 0;
 
         char* tmp = "/tmp/time.rep";
-        time_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
+        time_fd = open(tmp, O_RDONLY);
     }
-
-    int res = (*original_gettimeofday)(tp, tzp);
-    my_ck_write(time_fd, &tp, sizeof(tp), "gettimeofday");
-    return res;
+    my_ck_read(time_fd, &tp, sizeof(tp), "gettimeofday")
+    return 1;
 }
