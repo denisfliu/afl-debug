@@ -30,6 +30,8 @@ def main(args):
         # Set LD_PRELOAD for replay so file and run args.fuzz_command
         copy_metadata_to_tmp(args.base_dir)
         raise NotImplementedError
+        # TODO
+        subprocess.run(f"LD_PRELOAD=./src/components/replay.so {args.fuzz_command}".split())
 
         delete_metata_in_tmp()
         if args.print_compare:
@@ -40,6 +42,8 @@ def main(args):
     else:
         # Set LD_PRELOAD for base so file and run args.fuzz_command
         raise NotImplementedError
+        # TODO
+        subprocess.run(f"LD_PRELOAD=./src/components/base.so {args.fuzz_command}".split())
         move_metadata_to_afl_folder(afl_output_dir)
 
 

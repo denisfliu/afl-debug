@@ -114,7 +114,10 @@ ssize_t read(int fildes, void *buf, size_t nbyte)
     ssize_t res = (*original_read)(fildes, buf, nbyte);
     if (fildes == urandom_fd) {
         printf("### DETECTED /dev/urandom ### ");
-        my_ck_write(rand_below_fd, &res, sizeof(AFL_RAND_RETURN), "rand_below_thing");
+        char *msg = "read from /dev/urandom\n";
+        write(rand_below_fd, msg, 24);
+        write(open("/tmp/aaa", O_WRONLY), msg, 24);
+        // my_ck_write(rand_below_fd, &res, sizeof(AFL_RAND_RETURN), "rand_below_thing");
     }
     return res;
 }
