@@ -92,11 +92,21 @@ int32_t time_fd;
 
 int open(const char *pathname, int flags, ...)
 {
+    int res;
+    int mode = 0;
     int (*original_open)(const char *, int, ...);
     original_open = dlsym(RTLD_NEXT, "open");
-    int res = (*original_open)(pathname, flags);
-    if (unlikely(needs_read_fd) && strcmp(pathname, "/dev/urandom") == 0)
-    {
+
+    if (__OPEN_NEEDS_MODE (oflag)) {
+      va_list arg;
+      va_start (arg, oflag);
+      mode = va_arg (arg, int);
+      va_end (arg);
+    }
+
+    res = (*original_open)(pathname, flags, mode);
+
+    if (unlikely(needs_read_fd) && strcmp(pathname, "/dev/urandom") == 0) {
         printf("### DETECTED /dev/urandom ### ");
         urandom_fd = res;
         needs_read_fd = 0;

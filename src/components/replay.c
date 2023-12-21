@@ -91,9 +91,17 @@ int32_t time_fd;
 
 int open(const char *pathname, int flags, ...)
 {
+    int mode = 0;
     int (*original_open)(const char *, int, ...);
     original_open = dlsym(RTLD_NEXT, "open");
-    int res = (*original_open)(pathname, flags);
+
+    if (__OPEN_NEEDS_MODE (oflag)) {
+      va_list arg;
+      va_start (arg, oflag);
+      mode = va_arg (arg, int);
+      va_end (arg);
+    }
+
     if (unlikely(needs_read_fd) && strcmp(pathname, "/dev/urandom") == 0)
     {
         printf("### DETECTED /dev/urandom ### ");
@@ -101,9 +109,11 @@ int open(const char *pathname, int flags, ...)
         needs_read_fd = 0;
 
         char* tmp = "/tmp/replay.rep";
-        rand_below_fd = original_open(tmp, O_RDONLY);
+        rand_below_fd = (*original_open)(tmp, flags, mode);
+        return rand_below_fd;
     }
-    return res;
+
+    return (*original_open)(pathname, flags, mode);
 }
 
 ssize_t read(int fildes, void *buf, size_t nbyte)
