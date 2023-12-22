@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <dlfcn.h>
 #include <string.h>
@@ -86,7 +87,7 @@
 int needs_read_fd = 1;
 int needs_time_fd = 1;
 int32_t rand_below_fd;
-int32_t urandom_fd;
+//int32_t urandom_fd;
 int32_t time_fd;
 
 int open(const char *pathname, int flags, ...)
@@ -95,9 +96,9 @@ int open(const char *pathname, int flags, ...)
     int (*original_open)(const char *, int, ...);
     original_open = dlsym(RTLD_NEXT, "open");
 
-    if (__OPEN_NEEDS_MODE (oflag)) {
+    if (__OPEN_NEEDS_MODE (flags)) {
       va_list arg;
-      va_start (arg, oflag);
+      va_start (arg, flags);
       mode = va_arg (arg, int);
       va_end (arg);
     }
@@ -105,7 +106,7 @@ int open(const char *pathname, int flags, ...)
     if (unlikely(needs_read_fd) && strcmp(pathname, "/dev/urandom") == 0)
     {
         printf("### DETECTED /dev/urandom ### ");
-        urandom_fd = res;
+//urandom_fd = res;
         needs_read_fd = 0;
 
         char* tmp = "/tmp/replay.rep";
@@ -121,7 +122,7 @@ ssize_t read(int fildes, void *buf, size_t nbyte)
     ssize_t (*original_read)(int, void *, size_t);
     ssize_t res;
 
-    if (unlikely(fildes == urandom_fd)) {
+    if (unlikely(fildes == rand_below_fd)) {
         printf("### DETECTED /dev/urandom ### ");
         my_ck_read(rand_below_fd, &res, sizeof(AFL_RAND_RETURN), "urandom");
     } else {

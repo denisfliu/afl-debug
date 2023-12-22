@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <dlfcn.h>
 #include <string.h>
@@ -97,9 +98,9 @@ int open(const char *pathname, int flags, ...)
     int (*original_open)(const char *, int, ...);
     original_open = dlsym(RTLD_NEXT, "open");
 
-    if (__OPEN_NEEDS_MODE (oflag)) {
+    if (__OPEN_NEEDS_MODE (flags)) {
       va_list arg;
-      va_start (arg, oflag);
+      va_start (arg, flags);
       mode = va_arg (arg, int);
       va_end (arg);
     }
