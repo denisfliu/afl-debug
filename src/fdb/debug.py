@@ -4,7 +4,7 @@ from tqdm import tqdm
 import glob
 
 import src.fdb.factory as factory
-from src.fdb.utils import *
+from src.fdb.fdb_util import *
 
 
 class DebugType:
@@ -185,7 +185,7 @@ class GDBScript:
 
 def main():
     # initialize parameters for instance of Debug
-    from src.utils import get_config
+    from src.util import get_config
 
     config = get_config()
     gdb_obj = GDBScript(config)

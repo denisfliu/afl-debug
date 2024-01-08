@@ -3,9 +3,12 @@ import subprocess
 from typing import Tuple
 
 from src.bench.compare import compare
-from src.utils import fancy_print
+from src.util import fancy_print
 
 class FuzzRunner:
+    """
+    Class which runs fuzzers with the corresponding LD_PRELOAD stuff from src.components
+    """
     def __init__(self, fuzz_command: str, base_dir: str = None, is_replay: bool=False, do_compare: bool=False, time: int = 720):
         assert not is_replay or base_dir is not None, "Replaying requires -b"
         self.fuzz_command = fuzz_command

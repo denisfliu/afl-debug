@@ -1,7 +1,7 @@
 import argparse
 import sys
 
-from src.utils import get_config
+from src.util import get_config
 from src.bench.bench import Bench
 
 def main(args):

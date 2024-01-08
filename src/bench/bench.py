@@ -6,7 +6,7 @@ from enum import Enum
 from typing import Union
 from omegaconf import DictConfig, ListConfig
 
-from src.utils import fancy_print
+from src.util import fancy_print
 from src.fuzz import FuzzRunner
 
 

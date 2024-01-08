@@ -3,7 +3,7 @@ import time
 import struct
 
 import src.fdb.factory as factory
-from src.fdb.utils import *
+from src.fdb.fdb_util import *
 
 
 # too lazy to use asserts
