@@ -1,15 +1,13 @@
-import argparse
 import subprocess
 import os
-import sys
 
 from dataclasses import dataclass
 from enum import Enum
 from typing import Union
 from omegaconf import DictConfig, ListConfig
 
-from src.bench.compare import compare
-from src.utils import get_config, fancy_print
+from src.utils import fancy_print
+from src.fuzz import FuzzRunner
 
 
 class BinaryType(Enum):
@@ -68,7 +66,41 @@ class Bench:
 
     def bench(self):
         saved_percentages = []
+        self.__bench_asserts()
 
+        # Create parent output directory (for benchmark runs) if it doesn't exist
+        if not os.path.exists(self.output_dir):
+            subprocess.run(f"mkdir {self.output_dir}".split())
+
+        # Do benchmark runs and save percentage similarities
+        for i in range(self.iterations):
+            fuzz_path = os.path.join(self.output_dir, f"bench{i}")
+            percent, bad, total = self.exec_fuzz(self.input_dir, fuzz_path)
+            print(f"Benchmark {i}:")
+            print(f"Percentage similarity: {(1 - percent) * 100}%\n")
+            print(f"Correct/Total: {total - bad}/{total}\n")
+            saved_percentages.append(1 - percent)
+
+        # Print out similarities after all iterations completed
+        fancy_print("PERCENTAGE SIMILARITY")
+        for i in range(self.iterations):
+            iter_path = os.path.join(self.output_dir, f"bench{i}")
+            print(
+                f"{self.base_dir} vs. {iter_path}: {saved_percentages[i]*100:.3f}%"
+            )
+
+    def exec_fuzz(self, input_dir, output_dir):
+        fancy_print(f"Starting fuzzing process for {self.binary_dir}...")
+        command = ""
+        # TODO: this is kinda scuffed, probably best to add like a "format" variable with the default as "@@"
+        # NOTE: -r {self.base_dir} is phased out
+        if self.binary_type == BinaryType.OBJDUMP:
+            command = f"{self.config.afl_path} -i {input_dir} -o {output_dir} -- {self.binary_dir} -d @@"
+        else:
+            command = f"{self.config.afl_path} -i {input_dir} -o {output_dir} -- {self.binary_dir} @@"
+        return FuzzRunner(fuzz_command=command, base_dir=self.base_dir, is_replay=True, do_compare=True, time=self.time).run()
+
+    def __bench_asserts(self):
         # Delete benchmark runs if they exist (AFL++ won't run otherwise)
         if os.path.exists(os.path.join(self.output_dir, "bench0")) and self.force:
             for i in range(self.iterations):
@@ -86,102 +118,3 @@ class Bench:
         assert os.listdir(
             self.input_dir
         ), f"No valid seeds found at {self.input_dir}. Please verify your inputs."
-        # Create parent output directory (for benchmark runs) if it doesn't exist
-        if not os.path.exists(self.output_dir):
-            subprocess.run(f"mkdir {self.output_dir}".split())
-
-        # Do benchmark runs and save percentage similarities
-        for i in range(self.iterations):
-            fuzz_path = os.path.join(self.output_dir, f"bench{i}")
-            self.exec_fuzz(self.input_dir, fuzz_path)
-            percent, bad, total, _, _ = compare(self.base_dir, fuzz_path)
-            print(f"Benchmark {i}:")
-            print(f"Percentage similarity: {(1 - percent) * 100}%\n")
-            print(f"Correct/Total: {total - bad}/{total}\n")
-            saved_percentages.append(1 - percent)
-
-        # Print out similarities after all iterations completed
-        results_file = os.path.join(self.output_dir, self.config.bench.output_file)
-        with open(results_file, "w") as f:
-            fancy_print("PERCENTAGE SIMILARITY")
-            f.write("-" * 15 + "\nPERCENTAGE SIMILARITY\n" + "-" * 15 + "\n")
-            for i in range(self.iterations):
-                iter_path = os.path.join(self.output_dir, f"bench{i}")
-                print(
-                    f"{self.base_dir} vs. {iter_path}: {saved_percentages[i]*100:.3f}%"
-                )
-                f.write(
-                    f"{self.base_dir} vs. {iter_path}: {saved_percentages[i]*100:.3f}%\n"
-                )
-
-    # TODO: change this so it's more modular (we will need to implement different exec_fuzz functions for different fuzzers)
-    def exec_fuzz(self, input_dir, output_dir):
-        fancy_print(f"Starting fuzzing process for {self.binary_dir}...")
-        try:
-            # TODO: this is kinda scuffed, probably best to add like a "format" variable with the default as "@@"
-            if self.binary_type == BinaryType.OBJDUMP:
-                subprocess.run(
-                    f"{self.config.afl_path} -i {input_dir} -o {output_dir} -r {self.base_dir} -- {self.binary_dir} -d @@".split(),
-                    timeout=self.time + 2,
-                )  # 2 seconds for startup
-            else:
-                subprocess.run(
-                    f"{self.config.afl_path} -i {input_dir} -o {output_dir} -r {self.base_dir} -- {self.binary_dir} @@".split(),
-                    timeout=self.time + 2,
-                )  # 2 seconds for startup
-        except subprocess.TimeoutExpired:
-            fancy_print(
-                f"Completed fuzzing process for {self.binary_dir}.\nResults in: {output_dir}"
-            )
-
-
-def main(args):
-    print(args)
-    config = get_config()
-    b = Bench(
-        config=config,
-        time=(args.time if args.time is not None else config.bench.time),
-        iterations=(
-            args.iterations if args.iterations is not None else config.bench.iterations
-        ),
-        binary_dir=args.binary_dir,
-        base_dir=args.base_dir,
-        output_dir=args.output_dir,
-        input_dir=args.input_dir,
-        force=args.force,
-        write_results=args.write_results,
-    )
-    # print(b)
-    b.bench()
-
-
-if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Usage: python -m src.bench.bench -p [binary_path]")
-        print("-t, --time : amount of time to run the benchmark for per run")
-        print("-i, --iterations : number of iterations to run the benchmark")
-        print("-p, --binary_dir : path to the program/binary fuzzed")
-        print("-b, --base_dir : path to the base fuzz run directory")
-        print("-o, --output_dir : path to the directory to place the benchmark runs in")
-        print(
-            "-s, --input_dir : path to the directory with the seeds used in the base run"
-        )
-        print("-f, --force : use the force flag to remove existing benchmark runs")
-        print(
-            "-w, --write_results : write the similarity percentages to a file in output_dir"
-        )
-        print("Binaries supported:")
-        sys.exit(1)
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-t", "--time", type=int, required=False)
-    parser.add_argument("-i", "--iterations", type=int, required=False)
-    parser.add_argument("-p", "--binary_dir", type=str, required=True)
-    parser.add_argument("-b", "--base_dir", type=str, required=False)
-    parser.add_argument("-o", "--output_dir", type=str, required=False)
-    parser.add_argument("-s", "--input_dir", type=str, required=False)
-    parser.add_argument("-f", "--force", action="store_true", required=False)
-    parser.add_argument("-w", "--write_results", action="store_false", required=False)
-    args = parser.parse_args()
-    # print(args)
-    main(args)

@@ -7,7 +7,24 @@ fuzz:
   binary: 'install/bin/pdftotext'
 
 bench:
-  base_folder_path: 'outputs/base'
+  output_file: 'results.txt'
+  time: 120
+  iterations: 2
+  xpdf:
+    bin_path: '/home/denis/TestBinaries/fuzzing_xpdf/pdftotext'
+    base_path: '/home/denis/TestBinaries/fuzzing_xpdf/outputs/base'
+    output_path: '/home/denis/TestBinaries/fuzzing_xpdf/outputs'
+    input_path: '/home/denis/TestBinaries/fuzzing_xpdf/inputs'
+  # sleep:
+    # bin_path: '/home/denis/TestBinaries/fuzzing_sleep/sleep'
+    # base_path: '/home/denis/TestBinaries/fuzzing_sleep/outputs/base'
+    # output_path: '/home/denis/TestBinaries/fuzzing_sleep/outputs'
+    # input_path: '/home/denis/TestBinaries/fuzzing_sleep/inputs'
+  # objdump:
+    # bin_path: '/home/denis/TestBinaries/fuzzing_objdump/objdump'
+    # base_path: '/home/denis/TestBinaries/fuzzing_objdump/outputs/base'
+    # output_path: '/home/denis/TestBinaries/fuzzing_objdump/outputs'
+    # input_path: '/home/denis/TestBinaries/fuzzing_objdump/inputs'
 
 gdb:
   #breakpoints: ['afl-fuzz-bitmap.c:545']
