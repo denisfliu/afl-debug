@@ -12,7 +12,6 @@ bench:
   iterations: 2
   xpdf:
     bin_path: '/home/denis/TestBinaries/fuzzing_xpdf/pdftotext'
-    base_path: '/home/denis/TestBinaries/fuzzing_xpdf/outputs/base'
     output_path: '/home/denis/TestBinaries/fuzzing_xpdf/outputs'
     input_path: '/home/denis/TestBinaries/fuzzing_xpdf/inputs'
   # sleep:

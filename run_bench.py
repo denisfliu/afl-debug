@@ -46,7 +46,6 @@ if __name__ == "__main__":
     parser.add_argument("-t", "--time", type=int, required=False)
     parser.add_argument("-i", "--iterations", type=int, required=False)
     parser.add_argument("-p", "--binary_dir", type=str, required=True)
-    parser.add_argument("-b", "--base_dir", type=str, required=False)
     parser.add_argument("-o", "--output_dir", type=str, required=False)
     parser.add_argument("-s", "--input_dir", type=str, required=False)
     parser.add_argument("-f", "--force", action="store_true", required=False)

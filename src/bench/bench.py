@@ -23,7 +23,6 @@ class Bench:
     time: int
     iterations: int
     binary_dir: str
-    base_dir: str
     output_dir: str
     input_dir: str
     force: bool = False
@@ -44,19 +43,16 @@ class Bench:
 
         if self.binary_type != BinaryType.CUSTOM:
             self.binary_dir = bin_config.bin_path
-            if self.base_dir is None:
-                self.base_dir = bin_config.base_path
             if self.output_dir is None:
                 self.output_dir = bin_config.output_path
             if self.input_dir is None:
                 self.input_dir = bin_config.input_path
+            
+        self.base_dir = os.path.join(self.output_dir, "base")
 
         assert (
             self.binary_dir is not None
         ), "binary_dir cannot be None; must be specified by either config.yaml or input flags"
-        assert (
-            self.base_dir is not None
-        ), "base_dir cannot be None; must be specified by either config.yaml or input flags"
         assert (
             self.output_dir is not None
         ), "output_dir cannot be None; must be specified by either config.yaml or input flags"
@@ -71,11 +67,14 @@ class Bench:
         # Create parent output directory (for benchmark runs) if it doesn't exist
         if not os.path.exists(self.output_dir):
             subprocess.run(f"mkdir {self.output_dir}".split())
+        
+        # Do base run
+        self.exec_fuzz(self.input_dir, self.base_dir, is_replay=False)
 
         # Do benchmark runs and save percentage similarities
         for i in range(self.iterations):
             fuzz_path = os.path.join(self.output_dir, f"bench{i}")
-            percent, bad, total = self.exec_fuzz(self.input_dir, fuzz_path)
+            percent, bad, total = self.exec_fuzz(self.input_dir, fuzz_path, is_replay=True)
             print(f"Benchmark {i}:")
             print(f"Percentage similarity: {(1 - percent) * 100}%\n")
             print(f"Correct/Total: {total - bad}/{total}\n")
@@ -89,7 +88,7 @@ class Bench:
                 f"{self.base_dir} vs. {iter_path}: {saved_percentages[i]*100:.3f}%"
             )
 
-    def exec_fuzz(self, input_dir, output_dir):
+    def exec_fuzz(self, input_dir, output_dir, is_replay=True):
         fancy_print(f"Starting fuzzing process for {self.binary_dir}...")
         command = ""
         # TODO: this is kinda scuffed, probably best to add like a "format" variable with the default as "@@"
