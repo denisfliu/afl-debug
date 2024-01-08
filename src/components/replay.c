@@ -57,7 +57,7 @@
         int32_t _len = (int32_t)(len);               \
         int32_t _res = read(fd, buf, _len);          \
         if (_res != _len)                            \
-            RPFATAL(_res, "Short read from %s", fn); \
+            printf("Short read from %s", fn); \
                                                      \
     } while (0)
 
