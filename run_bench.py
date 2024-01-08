@@ -14,7 +14,6 @@ def main(args):
             args.iterations if args.iterations is not None else config.bench.iterations
         ),
         binary_dir=args.binary_dir,
-        base_dir=args.base_dir,
         output_dir=args.output_dir,
         input_dir=args.input_dir,
         force=args.force,
@@ -29,8 +28,7 @@ if __name__ == "__main__":
         print("Usage: python -m src.bench.bench -p [binary_path]")
         print("-t, --time : amount of time to run the benchmark for per run")
         print("-i, --iterations : number of iterations to run the benchmark")
-        print("-p, --binary_dir : path to the program/binary fuzzed")
-        print("-b, --base_dir : path to the base fuzz run directory")
+        print("-b, --binary_dir : xpdf/objdump/sleep OR path to the program/binary fuzzed")
         print("-o, --output_dir : path to the directory to place the benchmark runs in")
         print(
             "-s, --input_dir : path to the directory with the seeds used in the base run"
@@ -45,7 +43,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-t", "--time", type=int, required=False)
     parser.add_argument("-i", "--iterations", type=int, required=False)
-    parser.add_argument("-p", "--binary_dir", type=str, required=True)
+    parser.add_argument("-b", "--binary_dir", type=str, required=True)
     parser.add_argument("-o", "--output_dir", type=str, required=False)
     parser.add_argument("-s", "--input_dir", type=str, required=False)
     parser.add_argument("-f", "--force", action="store_true", required=False)

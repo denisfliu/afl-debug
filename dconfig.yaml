@@ -7,13 +7,12 @@ fuzz:
   binary: 'install/bin/pdftotext'
 
 bench:
-  output_file: 'results.txt'
-  time: 120
+  time: 15
   iterations: 2
   xpdf:
-    bin_path: '/home/denis/TestBinaries/fuzzing_xpdf/pdftotext'
-    output_path: '/home/denis/TestBinaries/fuzzing_xpdf/outputs'
-    input_path: '/home/denis/TestBinaries/fuzzing_xpdf/inputs'
+    bin_path: '/home/denis/Thesis/fuzzing_xpdf/xpdf-3.02/xpdf/pdftotext'
+    output_path: '/home/denis/Thesis/fuzzing_xpdf/outputs'
+    input_path: '/home/denis/Thesis/fuzzing_xpdf/pdf_examples'
   # sleep:
     # bin_path: '/home/denis/TestBinaries/fuzzing_sleep/sleep'
     # base_path: '/home/denis/TestBinaries/fuzzing_sleep/outputs/base'

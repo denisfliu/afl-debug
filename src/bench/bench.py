@@ -49,6 +49,7 @@ class Bench:
                 self.input_dir = bin_config.input_path
             
         self.base_dir = os.path.join(self.output_dir, "base")
+        self.base_exists = os.path.exists(os.path.join(self.base_dir, "default"))
 
         assert (
             self.binary_dir is not None
@@ -69,7 +70,8 @@ class Bench:
             subprocess.run(f"mkdir {self.output_dir}".split())
         
         # Do base run
-        self.exec_fuzz(self.input_dir, self.base_dir, is_replay=False)
+        if not self.base_exists:
+            self.exec_fuzz(self.input_dir, self.base_dir, is_replay=False)
 
         # Do benchmark runs and save percentage similarities
         for i in range(self.iterations):
@@ -97,7 +99,11 @@ class Bench:
             command = f"{self.config.afl_path} -i {input_dir} -o {output_dir} -- {self.binary_dir} -d @@"
         else:
             command = f"{self.config.afl_path} -i {input_dir} -o {output_dir} -- {self.binary_dir} @@"
-        return FuzzRunner(fuzz_command=command, base_dir=self.base_dir, is_replay=True, do_compare=True, time=self.time).run()
+        if is_replay:
+            return FuzzRunner(fuzz_command=command, base_dir=self.base_dir, is_replay=True, do_compare=True, time=self.time).run()
+        else:
+            return FuzzRunner(fuzz_command=command, base_dir=self.base_dir, is_replay=False, do_compare=False, time=self.time).run()
+
 
     def __bench_asserts(self):
         # Delete benchmark runs if they exist (AFL++ won't run otherwise)
@@ -108,9 +114,11 @@ class Bench:
         assert not os.path.exists(
             os.path.join(self.output_dir, "bench0")
         ), f"Existing benchmark found at {self.output_dir}. Use --force to overwrite it."
+        """
         assert os.path.exists(
             os.path.join(self.base_dir, "default")
         ), f"No fuzzing output found for the base run at {self.base_dir}."
+        """
         assert os.path.exists(
             self.input_dir
         ), f"No input directory found at {self.input_dir}. Please verify your inputs."

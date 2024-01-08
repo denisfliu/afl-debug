@@ -42,7 +42,7 @@ class FuzzRunner:
             if self.is_replay:
                 # Set LD_PRELOAD for replay so file and run args.fuzz_command
                 self.__copy_metadata_to_tmp()
-                subprocess.run(f"LD_PRELOAD=./src/components/so/replay.so {self.fuzz_command}".split(), timeout=self.time + 2)
+                subprocess.run(self.fuzz_command.split(), timeout=self.time + 2, env={"LD_PRELOAD": "src/components/so/replay.so"})
                 self.__delete_metata_in_tmp()
 
                 if self.do_compare:
@@ -53,11 +53,11 @@ class FuzzRunner:
                     return percent, bad, total
             else:
                 # Set LD_PRELOAD for base so file and run args.fuzz_command
-                subprocess.run(f"LD_PRELOAD=./src/components/so/base.so {self.fuzz_command}".split(), timeout=self.time + 2)
+                subprocess.run(self.fuzz_command.split(), timeout=self.time + 2, env={"LD_PRELOAD": "src/components/so/base.so"})
                 self.__move_metadata_to_folder()
                 return None, None, None
 
         except subprocess.TimeoutExpired:
             fancy_print(
-                f"Completed fuzzing process for {self.binary_dir}."
+                f"Completed fuzzing process for {self.output_dir}."
             )

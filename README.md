@@ -45,5 +45,5 @@ make install
 
 ### Running the benchmark
 ```
-python -m src.bench.bench -p [xpdf/sleep/objdump/custom_binary_path]
+python -m run_bench -p [xpdf/sleep/objdump/custom_binary_path]
 ```
