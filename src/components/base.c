@@ -145,6 +145,7 @@ int gettimeofday(struct timeval *tp, void *tzp)
     }
 
     int res = (*original_gettimeofday)(tp, tzp);
+    write(time_fd, &tp, sizeof(tp));
     // my_ck_write(time_fd, &tp, sizeof(tp), "gettimeofday");
     return res;
 }
