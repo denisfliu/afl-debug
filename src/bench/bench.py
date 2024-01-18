@@ -124,10 +124,11 @@ class Bench:
         if self.double_force:
             bench_path = os.path.join(self.output_dir, "base")
             subprocess.run(f"rm -r {bench_path}".split())
-        if os.path.exists(os.path.join(self.output_dir, "bench0")) and self.force:
-            for i in range(self.iterations):
-                bench_path = os.path.join(self.output_dir, f"bench{i}")
-                subprocess.run(f"rm -r {bench_path}".split())
+        i = 0
+        while os.path.exists(os.path.join(self.output_dir, f"bench{i}")) and self.force:
+            bench_path = os.path.join(self.output_dir, f"bench{i}")
+            subprocess.run(f"rm -r {bench_path}".split())
+            i += 1
         assert not os.path.exists(
             os.path.join(self.output_dir, "bench0")
         ), f"Existing benchmark found at {self.output_dir}. Use --force to overwrite it."
