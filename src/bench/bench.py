@@ -26,6 +26,7 @@ class Bench:
     output_dir: str
     input_dir: str
     force: bool = False
+    double_force: bool = False
     write_results: bool = False
 
     def __post_init__(self):
@@ -47,9 +48,11 @@ class Bench:
                 self.output_dir = bin_config.output_path
             if self.input_dir is None:
                 self.input_dir = bin_config.input_path
-            
+
         self.base_dir = os.path.join(self.output_dir, "base")
-        self.base_exists = os.path.exists(os.path.join(self.base_dir, "default"))
+        self.base_exists = not self.double_force and os.path.exists(
+            os.path.join(self.base_dir, "default")
+        )
 
         assert (
             self.binary_dir is not None
@@ -68,7 +71,7 @@ class Bench:
         # Create parent output directory (for benchmark runs) if it doesn't exist
         if not os.path.exists(self.output_dir):
             subprocess.run(f"mkdir {self.output_dir}".split())
-        
+
         # Do base run
         if not self.base_exists:
             self.exec_fuzz(self.input_dir, self.base_dir, is_replay=False)
@@ -76,7 +79,9 @@ class Bench:
         # Do benchmark runs and save percentage similarities
         for i in range(self.iterations):
             fuzz_path = os.path.join(self.output_dir, f"bench{i}")
-            percent, bad, total = self.exec_fuzz(self.input_dir, fuzz_path, is_replay=True)
+            percent, bad, total = self.exec_fuzz(
+                self.input_dir, fuzz_path, is_replay=True
+            )
             print(f"Benchmark {i}:")
             print(f"Percentage similarity: {(1 - percent) * 100}%\n")
             print(f"Correct/Total: {total - bad}/{total}\n")
@@ -86,9 +91,7 @@ class Bench:
         fancy_print("PERCENTAGE SIMILARITY")
         for i in range(self.iterations):
             iter_path = os.path.join(self.output_dir, f"bench{i}")
-            print(
-                f"{self.base_dir} vs. {iter_path}: {saved_percentages[i]*100:.3f}%"
-            )
+            print(f"{self.base_dir} vs. {iter_path}: {saved_percentages[i]*100:.3f}%")
 
     def exec_fuzz(self, input_dir, output_dir, is_replay=True):
         fancy_print(f"Starting fuzzing process for {self.binary_dir}...")
@@ -100,13 +103,27 @@ class Bench:
         else:
             command = f"{self.config.afl_path} -i {input_dir} -o {output_dir} -- {self.binary_dir} @@"
         if is_replay:
-            return FuzzRunner(fuzz_command=command, base_dir=self.base_dir, is_replay=True, do_compare=True, time=self.time).run()
+            return FuzzRunner(
+                fuzz_command=command,
+                base_dir=self.base_dir,
+                is_replay=True,
+                do_compare=True,
+                time=self.time,
+            ).run()
         else:
-            return FuzzRunner(fuzz_command=command, base_dir=self.base_dir, is_replay=False, do_compare=False, time=self.time).run()
-
+            return FuzzRunner(
+                fuzz_command=command,
+                base_dir=self.base_dir,
+                is_replay=False,
+                do_compare=False,
+                time=self.time,
+            ).run()
 
     def __bench_asserts(self):
         # Delete benchmark runs if they exist (AFL++ won't run otherwise)
+        if self.double_force:
+            bench_path = os.path.join(self.output_dir, "base")
+            subprocess.run(f"rm -r {bench_path}".split())
         if os.path.exists(os.path.join(self.output_dir, "bench0")) and self.force:
             for i in range(self.iterations):
                 bench_path = os.path.join(self.output_dir, f"bench{i}")
