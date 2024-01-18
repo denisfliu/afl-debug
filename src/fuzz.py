@@ -34,7 +34,6 @@ class FuzzRunner:
                 break
 
     def __move_metadata_to_afl_folder(self):
-        print("HHHHHHHHHHHHHHHH")
         os.popen(f"mkdir {self.output_dir}/replay")
         os.popen(f"mv /tmp/*.rep {self.output_dir}/replay/")
 
@@ -55,14 +54,6 @@ class FuzzRunner:
                     timeout=self.time + 2,
                     env={"LD_PRELOAD": "src/components/so/replay.so"},
                 )
-                self.__delete_metata_in_tmp()
-
-                if self.do_compare:
-                    percent, bad, total, _, _ = compare(self.base_dir, self.output_dir)
-                    fancy_print(
-                        f"Percentage similarity: {(1 - percent) * 100}%\nCorrect/Total: {total - bad}/{total}\n"
-                    )
-                    return percent, bad, total
             else:
                 # Set LD_PRELOAD for base so file and run args.fuzz_command
                 subprocess.run(
@@ -70,8 +61,19 @@ class FuzzRunner:
                     timeout=self.time + 2,
                     env={"LD_PRELOAD": "src/components/so/base.so"},
                 )
-                self.__move_metadata_to_afl_folder()
-                return None, None, None
 
         except subprocess.TimeoutExpired:
             fancy_print(f"Completed fuzzing process for {self.output_dir}.")
+            if self.is_replay:
+                self.__delete_metata_in_tmp()
+                if self.do_compare:
+                    percent, bad, total, _, _ = compare(self.base_dir, self.output_dir)
+                    fancy_print(
+                        f"Percentage similarity: {(1 - percent) * 100}%\nCorrect/Total: {total - bad}/{total}\n"
+                    )
+                    return percent, bad, total
+
+            else:
+                self.__move_metadata_to_afl_folder()
+                self.__delete_metata_in_tmp()
+                return None, None, None
