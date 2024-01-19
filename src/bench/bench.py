@@ -123,11 +123,11 @@ class Bench:
         # Delete benchmark runs if they exist (AFL++ won't run otherwise)
         if self.double_force:
             bench_path = os.path.join(self.output_dir, "base")
-            subprocess.run(f"rm -r {bench_path}".split())
+            subprocess.run(f"rm -rf {bench_path}".split())
         i = 0
         while os.path.exists(os.path.join(self.output_dir, f"bench{i}")) and self.force:
             bench_path = os.path.join(self.output_dir, f"bench{i}")
-            subprocess.run(f"rm -r {bench_path}".split())
+            subprocess.run(f"rm -rf {bench_path}".split())
             i += 1
         assert not os.path.exists(
             os.path.join(self.output_dir, "bench0")
