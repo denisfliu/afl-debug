@@ -8,6 +8,12 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <stddef.h>
+#include <string.h>
+#include <syscall.h>
+#include <stdio.h>
+
+#include "libsyscall_intercept_hook_point.h"
 
 // Some copied macros from AFL++
 /*
@@ -91,6 +97,27 @@ int32_t rand_below_fd;
 int32_t urandom_fd;
 int32_t time_fd;
 
+static int hook(long syscall_number,
+		long arg0, long arg1,
+		long arg2, long arg3,
+		long arg4, long arg5,
+		long *result)
+{
+	(void) arg3;
+	(void) arg4;
+	(void) arg5;
+
+	if (syscall_number == SYS_openat) {
+		char test[256] = "OPENAT: ";
+    strcat(test, (char *) arg1);
+		puts(test);
+
+		*result = syscall_no_intercept(SYS_openat, arg0, arg1, arg2, arg3);
+		return 0;
+	}
+	return 1;
+}
+
 int open(const char *pathname, int flags, ...)
 {
     int res;
@@ -148,4 +175,10 @@ int gettimeofday(struct timeval *tp, void *tzp)
     write(time_fd, &tp, sizeof(tp));
     // my_ck_write(time_fd, &tp, sizeof(tp), "gettimeofday");
     return res;
+}
+
+static __attribute__((constructor)) void
+start(void)
+{
+	intercept_hook_point = &hook;
 }
