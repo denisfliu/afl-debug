@@ -55,32 +55,19 @@ static int hook(long syscall_number,
 	(void) arg5;
 
 	if (syscall_number == SYS_openat) {
-    /*
-		char test[256] = "OPENAT: ";
-    strcat(test, (char *) arg1);
-		puts(test);
-    */
+		char buf_copy[256] = "";
+    strcat(buf_copy, (char *) arg1);
 
-    char buf_copy[0x1000];                                                         
-    size_t size = (size_t)arg2;
-
-    if (size > sizeof(buf_copy))
-        size = sizeof(buf_copy);
-
-    memcpy(buf_copy, (char *)arg1, size);
 		*result = syscall_no_intercept(SYS_openat, arg0, arg1, arg2, arg3, arg4);
 
-    puts(buf_copy);
     if (unlikely(needs_read_fd) && strcmp(buf_copy, "/dev/urandom") == 0) {
-        puts("MCFACE");
-  /*
-        puts("### DETECTED /dev/urandom ### ");
         urandom_fd = *result;
-        needs_read_fd = 0;
+        printf("### DETECTED /dev/urandom | fd: %d ###", urandom_fd);
 
+        needs_read_fd = 0;
         char* tmp = "/tmp/replay.rep";
         rand_below_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
-  */
+        printf("### TEMP FD CREATED: %d", rand_below_fd);
     }
 
 
