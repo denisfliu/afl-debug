@@ -27,6 +27,7 @@ class Bench:
     input_dir: str
     force: bool = False
     double_force: bool = False
+    ld_preload: bool = True
     write_results: bool = False
 
     def __post_init__(self):
@@ -108,6 +109,7 @@ class Bench:
                 base_dir=self.base_dir,
                 is_replay=True,
                 do_compare=True,
+                ld_preload=self.ld_preload,
                 time=self.time,
             ).run()
         else:
@@ -116,6 +118,7 @@ class Bench:
                 base_dir=self.base_dir,
                 is_replay=False,
                 do_compare=False,
+                ld_preload=self.ld_preload,
                 time=self.time,
             ).run()
 

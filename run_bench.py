@@ -18,6 +18,7 @@ def main(args):
         output_dir=args.output_dir,
         input_dir=args.input_dir,
         force=args.force,
+        ld_preload=args.use_ldpreload,
         double_force=args.double_force,
         write_results=args.write_results,
     )
@@ -37,6 +38,7 @@ if __name__ == "__main__":
         print(
             "-s, --input_dir : path to the directory with the seeds used in the base run"
         )
+        print("-l, --use_ldpreload : use LD_PRELOAD, on by default")
         print("-f, --force : use the force flag to remove existing benchmark runs")
         print("-ff, --double_force : use the force flag to remove existing base run")
         print(
@@ -53,6 +55,7 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--input_dir", type=str, required=False)
     parser.add_argument("-f", "--force", action="store_true", required=False)
     parser.add_argument("-ff", "--double_force", action="store_true", required=False)
+    parser.add_argument("-l", "--use_ldpreload", action="store_false", required=False)
     parser.add_argument("-w", "--write_results", action="store_false", required=False)
     args = parser.parse_args()
     # print(args)

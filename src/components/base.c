@@ -15,59 +15,6 @@
 
 #include "libsyscall_intercept_hook_point.h"
 
-// Some copied macros from AFL++
-/*
-#define my_ck_write(fd, buf, len, fn)                                                   \
-    do                                                                                  \
-    {                                                                                   \
-                                                                                        \
-        if (len <= 0)                                                                   \
-            break;                                                                      \
-        int _fd = (fd);                                                                 \
-        int32_t _written = 0, _off = 0, _len = (int32_t)(len);                          \
-                                                                                        \
-        do                                                                              \
-        {                                                                               \
-                                                                                        \
-            int32_t _res = write(_fd, (buf) + _off, _len);                              \
-            if (_res != _len && (_res > 0 && _written + _res != _len))                  \
-            {                                                                           \
-                                                                                        \
-                if (_res > 0)                                                           \
-                {                                                                       \
-                                                                                        \
-                    _written += _res;                                                   \
-                    _len -= _res;                                                       \
-                    _off += _res;                                                       \
-                }                                                                       \
-                else                                                                    \
-                {                                                                       \
-                                                                                        \
-                    RPFATAL(_res, "Short write to %s, fd %d (%d of %d bytes)", fn, _fd, \
-                            _res, _len);                                                \
-                }                                                                       \
-            }                                                                           \
-            else                                                                        \
-            {                                                                           \
-                                                                                        \
-                break;                                                                  \
-            }                                                                           \
-                                                                                        \
-        } while (1);                                                                    \
-                                                                                        \
-    } while (0)
-
-#define my_ck_read(fd, buf, len, fn)                 \
-    do                                               \
-    {                                                \
-                                                     \
-        int32_t _len = (int32_t)(len);               \
-        int32_t _res = read(fd, buf, _len);          \
-        if (_res != _len)                            \
-            RPFATAL(_res, "Short read from %s", fn); \
-                                                     \
-    } while (0)
-*/
 #if __GNUC__ < 6
   #ifndef likely
     #define likely(_x) (_x)
@@ -108,16 +55,41 @@ static int hook(long syscall_number,
 	(void) arg5;
 
 	if (syscall_number == SYS_openat) {
+    /*
 		char test[256] = "OPENAT: ";
     strcat(test, (char *) arg1);
 		puts(test);
+    */
 
-		*result = syscall_no_intercept(SYS_openat, arg0, arg1, arg2, arg3);
+    char buf_copy[0x1000];                                                         
+    size_t size = (size_t)arg2;
+
+    if (size > sizeof(buf_copy))
+        size = sizeof(buf_copy);
+
+    memcpy(buf_copy, (char *)arg1, size);
+		*result = syscall_no_intercept(SYS_openat, arg0, arg1, arg2, arg3, arg4);
+
+    puts(buf_copy);
+    if (unlikely(needs_read_fd) && strcmp(buf_copy, "/dev/urandom") == 0) {
+        puts("MCFACE");
+  /*
+        puts("### DETECTED /dev/urandom ### ");
+        urandom_fd = *result;
+        needs_read_fd = 0;
+
+        char* tmp = "/tmp/replay.rep";
+        rand_below_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
+  */
+    }
+
+
 		return 0;
 	}
 	return 1;
 }
 
+/*
 int open(const char *pathname, int flags, ...)
 {
     int res;
@@ -144,6 +116,7 @@ int open(const char *pathname, int flags, ...)
     }
     return res;
 }
+*/
 
 ssize_t read(int fildes, void *buf, size_t nbyte)
 {

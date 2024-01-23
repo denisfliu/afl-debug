@@ -17,6 +17,7 @@ class FuzzRunner:
         base_dir: str = None,
         is_replay: bool = False,
         do_compare: bool = False,
+        ld_preload: bool = True,
         time: int = 720,
     ):
         assert not is_replay or base_dir is not None, "Replaying requires -b"
@@ -25,6 +26,7 @@ class FuzzRunner:
         self.is_replay = is_replay
         self.do_compare = do_compare
         self.time = time
+        self.ld_preload = ld_preload
         self.output_dir = ""
 
         command = fuzz_command.split()
@@ -52,14 +54,22 @@ class FuzzRunner:
                 subprocess.run(
                     self.fuzz_command.split(),
                     timeout=self.time + 2,
-                    env={"LD_PRELOAD": "src/components/so/replay.so"},
+                    env={
+                        "LD_PRELOAD": "src/components/so/replay.so"
+                        if self.ld_preload
+                        else ""
+                    },
                 )
             else:
                 # Set LD_PRELOAD for base so file and run args.fuzz_command
                 subprocess.run(
                     self.fuzz_command.split(),
                     timeout=self.time + 2,
-                    env={"LD_PRELOAD": "src/components/so/base.so"},
+                    env={
+                        "LD_PRELOAD": "src/components/so/base.so"
+                        if self.ld_preload
+                        else ""
+                    },
                 )
 
         except subprocess.TimeoutExpired:
