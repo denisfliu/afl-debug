@@ -8,58 +8,11 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <stddef.h>
+#include <string.h>
+#include <syscall.h>
 
-// Some copied macros from AFL++
-#define my_ck_write(fd, buf, len, fn)                                                   \
-    do                                                                                  \
-    {                                                                                   \
-                                                                                        \
-        if (len <= 0)                                                                   \
-            break;                                                                      \
-        int _fd = (fd);                                                                 \
-        int32_t _written = 0, _off = 0, _len = (int32_t)(len);                          \
-                                                                                        \
-        do                                                                              \
-        {                                                                               \
-                                                                                        \
-            int32_t _res = write(_fd, (buf) + _off, _len);                              \
-            if (_res != _len && (_res > 0 && _written + _res != _len))                  \
-            {                                                                           \
-                                                                                        \
-                if (_res > 0)                                                           \
-                {                                                                       \
-                                                                                        \
-                    _written += _res;                                                   \
-                    _len -= _res;                                                       \
-                    _off += _res;                                                       \
-                }                                                                       \
-                else                                                                    \
-                {                                                                       \
-                                                                                        \
-                    RPFATAL(_res, "Short write to %s, fd %d (%d of %d bytes)", fn, _fd, \
-                            _res, _len);                                                \
-                }                                                                       \
-            }                                                                           \
-            else                                                                        \
-            {                                                                           \
-                                                                                        \
-                break;                                                                  \
-            }                                                                           \
-                                                                                        \
-        } while (1);                                                                    \
-                                                                                        \
-    } while (0)
-
-#define my_ck_read(fd, buf, len, fn)                 \
-    do                                               \
-    {                                                \
-                                                     \
-        int32_t _len = (int32_t)(len);               \
-        int32_t _res = read(fd, buf, _len);          \
-        if (_res != _len)                            \
-            printf("Failed: Short read from %s\n", fn); \
-                                                     \
-    } while (0)
+#include "libsyscall_intercept_hook_point.h"
 
 #if __GNUC__ < 6
   #ifndef likely
@@ -87,50 +40,83 @@
 int needs_read_fd = 1;
 int needs_time_fd = 1;
 int32_t rand_below_fd;
-//int32_t urandom_fd;
+int32_t urandom_fd;
 int32_t time_fd;
 
-int open(const char *pathname, int flags, ...)
+static int hook(long syscall_number,
+		long arg0, long arg1,
+		long arg2, long arg3,
+		long arg4, long arg5,
+		long *result)
 {
-    int mode = 0;
-    int (*original_open)(const char *, int, ...);
-    original_open = dlsym(RTLD_NEXT, "open");
+	(void) arg3;
+	(void) arg4;
+	(void) arg5;
 
-    if (__OPEN_NEEDS_MODE (flags)) {
-      va_list arg;
-      va_start (arg, flags);
-      mode = va_arg (arg, int);
-      va_end (arg);
-    }
+	if (syscall_number == SYS_openat) {
+		char buf_copy[256] = "";
+    strcat(buf_copy, (char *) arg1);
 
-    if (unlikely(needs_read_fd) && strcmp(pathname, "/dev/urandom") == 0)
-    {
-        printf("### DETECTED /dev/urandom ### ");
-//urandom_fd = res;
+    if (unlikely(needs_read_fd) && strcmp(buf_copy, "/dev/urandom") == 0) {
+        urandom_fd = *result;
+        printf("### replay.c openat() /dev/urandom | fd: %d ###", urandom_fd);
+
         needs_read_fd = 0;
-
         char* tmp = "/tmp/replay.rep";
-        rand_below_fd = (*original_open)(tmp, flags, mode);
-        return rand_below_fd;
-    }
-
-    return (*original_open)(pathname, flags, mode);
-}
-
-ssize_t read(int fildes, void *buf, size_t nbyte)
-{
-    ssize_t (*original_read)(int, void *, size_t);
-    ssize_t res;
-
-    if (unlikely(fildes == rand_below_fd)) {
-        printf("### DETECTED /dev/urandom ### ");
-        my_ck_read(rand_below_fd, &res, sizeof(AFL_RAND_RETURN), "urandom");
+        // rand_below_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
+        *result = syscall_no_intercept(SYS_openat, arg0, tmp, arg2, arg3, arg4);
+        printf("### TEMP FD CREATED: %d", rand_below_fd);
     } else {
-      original_read = dlsym(RTLD_NEXT, "read");
-      res = (*original_read)(fildes, buf, nbyte);
+        *result = syscall_no_intercept(SYS_openat, arg0, arg1, arg2, arg3, arg4);
     }
-    return res;
+
+
+		return 0;
+	}
+	return 1;
 }
+
+// int open(const char *pathname, int flags, ...)
+// {
+//     int mode = 0;
+//     int (*original_open)(const char *, int, ...);
+//     original_open = dlsym(RTLD_NEXT, "open");
+
+//     if (__OPEN_NEEDS_MODE (flags)) {
+//       va_list arg;
+//       va_start (arg, flags);
+//       mode = va_arg (arg, int);
+//       va_end (arg);
+//     }
+
+//     if (unlikely(needs_read_fd) && strcmp(pathname, "/dev/urandom") == 0)
+//     {
+//         printf("### DETECTED /dev/urandom ### ");
+// //urandom_fd = res;
+//         needs_read_fd = 0;
+
+//         char* tmp = "/tmp/replay.rep";
+//         rand_below_fd = (*original_open)(tmp, flags, mode);
+//         return rand_below_fd;
+//     }
+
+//     return (*original_open)(pathname, flags, mode);
+// }
+
+// ssize_t read(int fildes, void *buf, size_t nbyte)
+// {
+//     ssize_t (*original_read)(int, void *, size_t);
+//     ssize_t res;
+
+//     if (unlikely(fildes == rand_below_fd)) {
+//         printf("### DETECTED /dev/urandom ### ");
+//         my_ck_read(rand_below_fd, &res, sizeof(AFL_RAND_RETURN), "urandom");
+//     } else {
+//       original_read = dlsym(RTLD_NEXT, "read");
+//       res = (*original_read)(fildes, buf, nbyte);
+//     }
+//     return res;
+// }
 
 int gettimeofday(struct timeval *tp, void *tzp)
 {
@@ -140,6 +126,12 @@ int gettimeofday(struct timeval *tp, void *tzp)
         char* tmp = "/tmp/time.rep";
         time_fd = open(tmp, O_RDONLY);
     }
-    my_ck_read(time_fd, &tp, sizeof(tp), "gettimeofday");
+    read(time_fd, tp, sizeof(*tp));
     return 1;
+}
+
+static __attribute__((constructor)) void
+start(void)
+{
+	intercept_hook_point = &hook;
 }

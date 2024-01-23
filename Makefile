@@ -10,10 +10,10 @@ OUT = $(COMPONENTS)a.out
 all: base replay
 
 base: $(BASEC)
-	gcc $(BASEC) -lsyscall_intercept  -fPIC -Wall -shared -ldl -o $(BASEOBJ)
+	gcc $(BASEC) -lsyscall_intercept -fPIC -Wall -shared -ldl -o $(BASEOBJ)
 
 replay: $(REPLAYC)
-	gcc -Wall -fPIC -shared -o $(REPLAYOBJ) $(REPLAYC) -ldl
+	gcc $(REPLAYC) -lsyscall_intercept -fPIC -Wall -shared -ldl -o $(REPLAYOBJ)
 
 testa: $(TESTC)
 	gcc -Wall $(TESTC) -o $(OUT)

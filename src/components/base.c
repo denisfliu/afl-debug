@@ -62,12 +62,11 @@ static int hook(long syscall_number,
 
     if (unlikely(needs_read_fd) && strcmp(buf_copy, "/dev/urandom") == 0) {
         urandom_fd = *result;
-        printf("### DETECTED /dev/urandom | fd: %d ###", urandom_fd);
+        printf("### base.c openat() /dev/urandom | fd: %d ###", urandom_fd);
 
         needs_read_fd = 0;
         char* tmp = "/tmp/replay.rep";
         rand_below_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
-        printf("### TEMP FD CREATED: %d", rand_below_fd);
     }
 
 
@@ -107,21 +106,20 @@ int open(const char *pathname, int flags, ...)
 
 ssize_t read(int fildes, void *buf, size_t nbyte)
 {
+    // printf("Calling read(%d) AAAAA\n", fildes);
     ssize_t (*original_read)(int, void *, size_t);
     original_read = dlsym(RTLD_NEXT, "read");
     ssize_t res = (*original_read)(fildes, buf, nbyte);
     if (fildes == urandom_fd) {
-        printf("### DETECTED /dev/urandom ### ");
-        char *msg = "read from /dev/urandom\n";
-        write(rand_below_fd, msg, 24);
-        write(open("/tmp/aaa", O_WRONLY), msg, 24);
-        // my_ck_write(rand_below_fd, &res, sizeof(AFL_RAND_RETURN), "rand_below_thing");
+        printf("### base.c read() /dev/urandom ###");
+        write(open("/tmp/replay.rep", O_WRONLY), buf, nbyte);
     }
     return res;
 }
 
 int gettimeofday(struct timeval *tp, void *tzp)
 {
+    
     int (*original_gettimeofday)(struct timeval *, void *);
     original_gettimeofday = dlsym(RTLD_NEXT, "gettimeofday");
     if (unlikely(needs_time_fd)) {
@@ -132,7 +130,7 @@ int gettimeofday(struct timeval *tp, void *tzp)
     }
 
     int res = (*original_gettimeofday)(tp, tzp);
-    write(time_fd, &tp, sizeof(tp));
+    write(time_fd, tp, sizeof(*tp));
     // my_ck_write(time_fd, &tp, sizeof(tp), "gettimeofday");
     return res;
 }

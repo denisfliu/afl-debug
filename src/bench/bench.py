@@ -103,24 +103,15 @@ class Bench:
             command = f"{self.config.afl_path} -i {input_dir} -o {output_dir} -- {self.binary_dir} -d @@"
         else:
             command = f"{self.config.afl_path} -i {input_dir} -o {output_dir} -- {self.binary_dir} @@"
-        if is_replay:
-            return FuzzRunner(
-                fuzz_command=command,
-                base_dir=self.base_dir,
-                is_replay=True,
-                do_compare=True,
-                ld_preload=self.ld_preload,
-                time=self.time,
-            ).run()
-        else:
-            return FuzzRunner(
-                fuzz_command=command,
-                base_dir=self.base_dir,
-                is_replay=False,
-                do_compare=False,
-                ld_preload=self.ld_preload,
-                time=self.time,
-            ).run()
+        return FuzzRunner(
+            fuzz_command=command,
+            base_dir=self.base_dir,
+            is_replay=is_replay,
+            do_compare=is_replay,
+            ld_preload=self.ld_preload,
+            time=self.time,
+        ).run()
+        
 
     def __bench_asserts(self):
         # Delete benchmark runs if they exist (AFL++ won't run otherwise)
