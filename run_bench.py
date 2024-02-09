@@ -1,13 +1,14 @@
 import argparse
 import sys
 
-from src.util import get_config
+from src.util import get_config, delete_metata_in_tmp
 from src.bench.bench import Bench
 
 
 def main(args):
     print(args)
     config = get_config()
+    delete_metata_in_tmp()
     b = Bench(
         config=config,
         time=(args.time if args.time is not None else config.bench.time),

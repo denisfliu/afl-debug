@@ -112,7 +112,7 @@ ssize_t read(int fildes, void *buf, size_t nbyte)
     ssize_t res = (*original_read)(fildes, buf, nbyte);
     if (fildes == urandom_fd) {
         printf("### base.c read() /dev/urandom ###");
-        write(open("/tmp/replay.rep", O_WRONLY), buf, nbyte);
+        write(rand_below_fd, buf, nbyte);
     }
     return res;
 }

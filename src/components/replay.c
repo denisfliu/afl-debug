@@ -39,7 +39,7 @@
 
 int needs_read_fd = 1;
 int needs_time_fd = 1;
-int32_t rand_below_fd;
+// int32_t rand_below_fd;
 int32_t urandom_fd;
 int32_t time_fd;
 
@@ -58,23 +58,30 @@ static int hook(long syscall_number,
     strcat(buf_copy, (char *) arg1);
 
     if (unlikely(needs_read_fd) && strcmp(buf_copy, "/dev/urandom") == 0) {
+        char* tmp = "/tmp/replay.rep";
+        *result = syscall_no_intercept(SYS_openat, arg0, tmp, arg2, arg3, arg4);
         urandom_fd = *result;
         printf("### replay.c openat() /dev/urandom | fd: %d ###", urandom_fd);
 
         needs_read_fd = 0;
-        char* tmp = "/tmp/replay.rep";
         // rand_below_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
-        *result = syscall_no_intercept(SYS_openat, arg0, tmp, arg2, arg3, arg4);
-        printf("### TEMP FD CREATED: %d", rand_below_fd);
-    } else {
-        *result = syscall_no_intercept(SYS_openat, arg0, arg1, arg2, arg3, arg4);
+	return 0;
     }
-
-
-		return 0;
 	}
 	return 1;
 }
+
+ssize_t read(int fildes, void *buf, size_t nbyte)
+{
+    ssize_t (*original_read)(int, void *, size_t);
+    original_read = dlsym(RTLD_NEXT, "read");
+    ssize_t res = (*original_read)(fildes, buf, nbyte);
+    if (fildes == urandom_fd) {
+        printf("### READING FROM FAKE DEV URANDOM read() /dev/urandom ###");
+    }
+    return res;
+}
+
 
 // int open(const char *pathname, int flags, ...)
 // {

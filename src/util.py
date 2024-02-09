@@ -12,3 +12,6 @@ def fancy_print(s: str):
     print("-" * 15)
     print(s)
     print("-" * 15)
+
+def delete_metata_in_tmp():
+    os.popen(f"rm /tmp/*.rep")

@@ -3,7 +3,7 @@ import subprocess
 from typing import Tuple
 
 from src.bench.compare import compare
-from src.util import fancy_print
+from src.util import fancy_print, delete_metata_in_tmp
 
 
 class FuzzRunner:
@@ -43,9 +43,6 @@ class FuzzRunner:
     def __copy_metadata_to_tmp(self):
         os.popen(f"cp {self.base_dir}/replay/* /tmp")
 
-    def __delete_metata_in_tmp(self):
-        os.popen(f"rm /tmp/*.rep")
-
     def run(self) -> Tuple[float, int, int]:
         try:
             if self.is_replay:
@@ -72,18 +69,21 @@ class FuzzRunner:
                     },
                 )
 
-        except subprocess.TimeoutExpired:
-            fancy_print(f"Completed fuzzing process for {self.output_dir}.")
-            if self.is_replay:
-                self.__delete_metata_in_tmp()
-                if self.do_compare:
-                    percent, bad, total, _, _ = compare(self.base_dir, self.output_dir)
-                    fancy_print(
-                        f"Percentage similarity: {(1 - percent) * 100}%\nCorrect/Total: {total - bad}/{total}\n"
-                    )
-                    return percent, bad, total
+        # TODO: more verbose error
+        except Exception as e:
+            pass
 
-            else:
-                self.__move_metadata_to_afl_folder()
-                self.__delete_metata_in_tmp()
-                return None, None, None
+        fancy_print(f"Completed fuzzing process for {self.output_dir}.")
+        if self.is_replay:
+            delete_metata_in_tmp()
+            if self.do_compare:
+                percent, bad, total, _, _ = compare(self.base_dir, self.output_dir)
+                fancy_print(
+                    f"Percentage similarity: {(1 - percent) * 100}%\nCorrect/Total: {total - bad}/{total}\n"
+                )
+                return percent, bad, total
+
+        else:
+            self.__move_metadata_to_afl_folder()
+            delete_metata_in_tmp()
+            return None, None, None
