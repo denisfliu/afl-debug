@@ -11,6 +11,7 @@
 #include <stddef.h>
 #include <string.h>
 #include <syscall.h>
+#include <stdlib.h>
 
 #include "libsyscall_intercept_hook_point.h"
 
@@ -37,11 +38,21 @@
 #endif
 
 
-int needs_read_fd = 1;
-int needs_time_fd = 1;
-// int32_t rand_below_fd;
+int needs_rand_below_fd = 1;
 int32_t urandom_fd;
+
+int needs_time_fd = 1;
 int32_t time_fd;
+
+int needs_read_pipe_fd = 1;
+int needs_write_pipe_fd = 1;
+int32_t read_pipe_fd;
+int32_t write_pipe_fd;
+
+// experiment
+int needs_file_out_fd = 1;
+int32_t next_file_out_fd = 13;
+int32_t file_out_fd;
 
 static int hook(long syscall_number,
 		long arg0, long arg1,
@@ -57,13 +68,13 @@ static int hook(long syscall_number,
 		char buf_copy[256] = "";
     strcat(buf_copy, (char *) arg1);
 
-    if (unlikely(needs_read_fd) && strcmp(buf_copy, "/dev/urandom") == 0) {
+    if (unlikely(needs_rand_below_fd) && strcmp(buf_copy, "/dev/urandom") == 0) {
         char* tmp = "/tmp/replay.rep";
         *result = syscall_no_intercept(SYS_openat, arg0, tmp, arg2, arg3, arg4);
         urandom_fd = *result;
         printf("### replay.c openat() /dev/urandom | fd: %d ###", urandom_fd);
 
-        needs_read_fd = 0;
+        needs_rand_below_fd = 0;
         // rand_below_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
 	return 0;
     }
@@ -76,54 +87,65 @@ ssize_t read(int fildes, void *buf, size_t nbyte)
     ssize_t (*original_read)(int, void *, size_t);
     original_read = dlsym(RTLD_NEXT, "read");
     ssize_t res = (*original_read)(fildes, buf, nbyte);
-    if (fildes == urandom_fd) {
+
+/*
+    if (unlikely(fildes == 198)) {
+      if (unlikely(needs_read_pipe_fd)) {
+        needs_read_pipe_fd = 0;
+        char* tmp = "/tmp/read_pipe.rep";
+        read_pipe_fd = open(tmp, O_RDONLY);
+
+      }
+      return (*original_read)(read_pipe_fd, buf, nbyte);
+    }
+    else if (fildes == urandom_fd) {
         printf("### READING FROM FAKE DEV URANDOM read() /dev/urandom ###");
+    }
+*/
+    if (unlikely(fildes == 47)) {
+      next_file_out_fd = res;
     }
     return res;
 }
 
+ssize_t write(int fildes, const void *buf, size_t nbyte) 
+{
+    ssize_t (*original_write)(int, const void *, size_t);
+    original_write = dlsym(RTLD_NEXT, "write");
+    ssize_t res;
+    if (0) {
 
-// int open(const char *pathname, int flags, ...)
-// {
-//     int mode = 0;
-//     int (*original_open)(const char *, int, ...);
-//     original_open = dlsym(RTLD_NEXT, "open");
+    }
+    /*
+    else if (unlikely(fildes == 199)) {
+      void *buf1 = (void*) malloc(nbyte);
+      if (unlikely(needs_write_pipe_fd)) {
+        needs_write_pipe_fd = 0;
+        char* tmp = "/tmp/write_pipe.rep";
+        write_pipe_fd = open(tmp, O_RDONLY);
+      }
+      read(write_pipe_fd, buf1, nbyte);
+      res = (*original_write)(fildes, buf1, nbyte);
+      free(buf1);
+    }
+    */
+    else if (unlikely(fildes == 47)) {
+      void *buf1 = (void*) malloc(nbyte);
+      if (unlikely(needs_file_out_fd)) {
+        needs_file_out_fd = 0;
+        char* tmp = "/tmp/file_out.rep";
+        file_out_fd = open(tmp, O_RDONLY);
+      }
+      read(file_out_fd, buf1, nbyte);
+      res = (*original_write)(fildes, buf1, nbyte);
+      free(buf1);
+    } 
+    else {
+      res = (*original_write)(fildes, buf, nbyte);
+    }
 
-//     if (__OPEN_NEEDS_MODE (flags)) {
-//       va_list arg;
-//       va_start (arg, flags);
-//       mode = va_arg (arg, int);
-//       va_end (arg);
-//     }
-
-//     if (unlikely(needs_read_fd) && strcmp(pathname, "/dev/urandom") == 0)
-//     {
-//         printf("### DETECTED /dev/urandom ### ");
-// //urandom_fd = res;
-//         needs_read_fd = 0;
-
-//         char* tmp = "/tmp/replay.rep";
-//         rand_below_fd = (*original_open)(tmp, flags, mode);
-//         return rand_below_fd;
-//     }
-
-//     return (*original_open)(pathname, flags, mode);
-// }
-
-// ssize_t read(int fildes, void *buf, size_t nbyte)
-// {
-//     ssize_t (*original_read)(int, void *, size_t);
-//     ssize_t res;
-
-//     if (unlikely(fildes == rand_below_fd)) {
-//         printf("### DETECTED /dev/urandom ### ");
-//         my_ck_read(rand_below_fd, &res, sizeof(AFL_RAND_RETURN), "urandom");
-//     } else {
-//       original_read = dlsym(RTLD_NEXT, "read");
-//       res = (*original_read)(fildes, buf, nbyte);
-//     }
-//     return res;
-// }
+    return res;
+}
 
 int gettimeofday(struct timeval *tp, void *tzp)
 {

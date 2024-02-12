@@ -38,11 +38,25 @@
 #endif
 
 
-int needs_read_fd = 1;
-int needs_time_fd = 1;
-int32_t rand_below_fd;
+// openat rand below
+int needs_rand_below_fd = 1;
 int32_t urandom_fd;
+int32_t rand_below_fd;
+
+// gettimeofday
+int needs_time_fd = 1;
 int32_t time_fd;
+
+// experiment
+int needs_read_pipe_fd = 1;
+int needs_write_pipe_fd = 1;
+int32_t read_pipe_fd;
+int32_t write_pipe_fd;
+
+// experiment
+int needs_file_out_fd = 1;
+int32_t next_file_out_fd = 13;
+int32_t file_out_fd = 13;
 
 static int hook(long syscall_number,
 		long arg0, long arg1,
@@ -56,18 +70,18 @@ static int hook(long syscall_number,
 
 	if (syscall_number == SYS_openat) {
 		char buf_copy[256] = "";
-    strcat(buf_copy, (char *) arg1);
+        strcat(buf_copy, (char *) arg1);
 
 		*result = syscall_no_intercept(SYS_openat, arg0, arg1, arg2, arg3, arg4);
 
-    if (unlikely(needs_read_fd) && strcmp(buf_copy, "/dev/urandom") == 0) {
-        urandom_fd = *result;
-        printf("### base.c openat() /dev/urandom | fd: %d ###", urandom_fd);
+        if (unlikely(needs_rand_below_fd) && strcmp(buf_copy, "/dev/urandom") == 0) {
+            urandom_fd = *result;
+            printf("### base.c openat() /dev/urandom | fd: %d ###", urandom_fd);
 
-        needs_read_fd = 0;
-        char* tmp = "/tmp/replay.rep";
-        rand_below_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
-    }
+            needs_rand_below_fd = 0;
+            char* tmp = "/tmp/replay.rep";
+            rand_below_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
+        }
 
 
 		return 0;
@@ -75,38 +89,8 @@ static int hook(long syscall_number,
 	return 1;
 }
 
-/*
-int open(const char *pathname, int flags, ...)
-{
-    int res;
-    int mode = 0;
-    int (*original_open)(const char *, int, ...);
-    original_open = dlsym(RTLD_NEXT, "open");
-
-    if (__OPEN_NEEDS_MODE (flags)) {
-      va_list arg;
-      va_start (arg, flags);
-      mode = va_arg (arg, int);
-      va_end (arg);
-    }
-
-    res = (*original_open)(pathname, flags, mode);
-
-    if (unlikely(needs_read_fd) && strcmp(pathname, "/dev/urandom") == 0) {
-        printf("### DETECTED /dev/urandom ### ");
-        urandom_fd = res;
-        needs_read_fd = 0;
-
-        char* tmp = "/tmp/replay.rep";
-        rand_below_fd = original_open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
-    }
-    return res;
-}
-*/
-
 ssize_t read(int fildes, void *buf, size_t nbyte)
 {
-    // printf("Calling read(%d) AAAAA\n", fildes);
     ssize_t (*original_read)(int, void *, size_t);
     original_read = dlsym(RTLD_NEXT, "read");
     ssize_t res = (*original_read)(fildes, buf, nbyte);
@@ -114,8 +98,70 @@ ssize_t read(int fildes, void *buf, size_t nbyte)
         printf("### base.c read() /dev/urandom ###");
         write(rand_below_fd, buf, nbyte);
     }
+
+/*
+    else if (fildes == 198) {
+      if (unlikely(needs_read_pipe_fd)) {
+        needs_read_pipe_fd = 0;
+        char* tmp = "/tmp/read_pipe.rep";
+        read_pipe_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
+
+      }
+      write(read_pipe_fd, buf, nbyte);
+    }
+    else if (fildes == 199) {
+      FILE *fptr;
+      fptr = fopen("/tmp/yo.txt", "a");
+      fprintf(fptr, "Yo");
+      fclose(fptr);
+    }
+*/
+    else if (fildes == 47) {
+      next_file_out_fd = res;
+    }
+
     return res;
 }
+
+ssize_t write(int fildes, const void *buf, size_t nbyte) 
+{
+    ssize_t (*original_write)(int, const void *, size_t);
+    original_write = dlsym(RTLD_NEXT, "write");
+    ssize_t res = (*original_write)(fildes, buf, nbyte);
+
+    if (fildes == 1000) {
+
+    }
+    /*
+    else if (fildes == 199) {
+      if (unlikely(needs_write_pipe_fd)) {
+        needs_write_pipe_fd = 0;
+        char* tmp = "/tmp/write_pipe.rep";
+        write_pipe_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
+
+      }
+      write(write_pipe_fd, buf, nbyte);
+    }
+    else if (fildes == 198) {
+      FILE *fptr;
+      fptr = fopen("/tmp/yo1.txt", "a");
+      fprintf(fptr, "Yo");
+      fclose(fptr);
+    }
+    */
+    else if (fildes == next_file_out_fd) {
+      if (unlikely(needs_write_pipe_fd)) {
+        needs_file_out_fd = 0;
+        char* tmp = "/tmp/file_out.rep";
+        file_out_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
+
+      }
+      write(file_out_fd, buf, nbyte);
+    }
+
+    return res;
+}
+
 
 int gettimeofday(struct timeval *tp, void *tzp)
 {
