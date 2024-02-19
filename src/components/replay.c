@@ -53,6 +53,7 @@ int32_t write_pipe_fd;
 int needs_file_out_fd = 1;
 int32_t next_file_out_fd = 13;
 int32_t file_out_fd;
+int counting_get_time_of_day = 0;
 
 static int hook(long syscall_number,
 		long arg0, long arg1,
@@ -155,6 +156,12 @@ int gettimeofday(struct timeval *tp, void *tzp)
         time_fd = open(tmp, O_RDONLY);
     }
     read(time_fd, tp, sizeof(*tp));
+
+    FILE *fptr;
+    fptr = fopen("/tmp/time.txt", "a");
+    fprintf(fptr, "Index: %d | Timeofday: %llu\n", counting_get_time_of_day++, (tp->tv_sec * 1000000ULL) + tp->tv_usec);
+    fclose(fptr);
+    
     return 1;
 }
 
