@@ -155,7 +155,6 @@ int gettimeofday(struct timeval *tp, void *tzp)
         time_fd = open(tmp, O_RDONLY);
     }
     read(time_fd, tp, sizeof(*tp));
-    read(time_fd, tzp, sizeof(*tzp));
     return 1;
 }
 
