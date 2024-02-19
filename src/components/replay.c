@@ -82,32 +82,32 @@ static int hook(long syscall_number,
 	return 1;
 }
 
+/*
 ssize_t read(int fildes, void *buf, size_t nbyte)
 {
     ssize_t (*original_read)(int, void *, size_t);
     original_read = dlsym(RTLD_NEXT, "read");
     ssize_t res = (*original_read)(fildes, buf, nbyte);
 
-/*
     if (unlikely(fildes == 198)) {
       if (unlikely(needs_read_pipe_fd)) {
         needs_read_pipe_fd = 0;
         char* tmp = "/tmp/read_pipe.rep";
         read_pipe_fd = open(tmp, O_RDONLY);
-
       }
       return (*original_read)(read_pipe_fd, buf, nbyte);
     }
     else if (fildes == urandom_fd) {
         printf("### READING FROM FAKE DEV URANDOM read() /dev/urandom ###");
     }
-*/
-    if (unlikely(fildes == 47)) {
+    else if (unlikely(fildes == 47)) {
       next_file_out_fd = res;
     }
     return res;
 }
+*/
 
+/*
 ssize_t write(int fildes, const void *buf, size_t nbyte) 
 {
     ssize_t (*original_write)(int, const void *, size_t);
@@ -116,7 +116,6 @@ ssize_t write(int fildes, const void *buf, size_t nbyte)
     if (0) {
 
     }
-    /*
     else if (unlikely(fildes == 199)) {
       void *buf1 = (void*) malloc(nbyte);
       if (unlikely(needs_write_pipe_fd)) {
@@ -128,7 +127,6 @@ ssize_t write(int fildes, const void *buf, size_t nbyte)
       res = (*original_write)(fildes, buf1, nbyte);
       free(buf1);
     }
-    */
     else if (unlikely(fildes == 47)) {
       void *buf1 = (void*) malloc(nbyte);
       if (unlikely(needs_file_out_fd)) {
@@ -146,6 +144,7 @@ ssize_t write(int fildes, const void *buf, size_t nbyte)
 
     return res;
 }
+*/
 
 int gettimeofday(struct timeval *tp, void *tzp)
 {
@@ -156,6 +155,7 @@ int gettimeofday(struct timeval *tp, void *tzp)
         time_fd = open(tmp, O_RDONLY);
     }
     read(time_fd, tp, sizeof(*tp));
+    read(time_fd, tzp, sizeof(*tzp));
     return 1;
 }
 

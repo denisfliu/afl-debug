@@ -95,11 +95,9 @@ ssize_t read(int fildes, void *buf, size_t nbyte)
     original_read = dlsym(RTLD_NEXT, "read");
     ssize_t res = (*original_read)(fildes, buf, nbyte);
     if (fildes == urandom_fd) {
-        printf("### base.c read() /dev/urandom ###");
         write(rand_below_fd, buf, nbyte);
     }
-
-/*
+    /*
     else if (fildes == 198) {
       if (unlikely(needs_read_pipe_fd)) {
         needs_read_pipe_fd = 0;
@@ -109,20 +107,15 @@ ssize_t read(int fildes, void *buf, size_t nbyte)
       }
       write(read_pipe_fd, buf, nbyte);
     }
-    else if (fildes == 199) {
-      FILE *fptr;
-      fptr = fopen("/tmp/yo.txt", "a");
-      fprintf(fptr, "Yo");
-      fclose(fptr);
-    }
-*/
     else if (fildes == 47) {
       next_file_out_fd = res;
     }
+    */
 
     return res;
 }
 
+/*
 ssize_t write(int fildes, const void *buf, size_t nbyte) 
 {
     ssize_t (*original_write)(int, const void *, size_t);
@@ -132,7 +125,6 @@ ssize_t write(int fildes, const void *buf, size_t nbyte)
     if (fildes == 1000) {
 
     }
-    /*
     else if (fildes == 199) {
       if (unlikely(needs_write_pipe_fd)) {
         needs_write_pipe_fd = 0;
@@ -142,13 +134,6 @@ ssize_t write(int fildes, const void *buf, size_t nbyte)
       }
       write(write_pipe_fd, buf, nbyte);
     }
-    else if (fildes == 198) {
-      FILE *fptr;
-      fptr = fopen("/tmp/yo1.txt", "a");
-      fprintf(fptr, "Yo");
-      fclose(fptr);
-    }
-    */
     else if (fildes == next_file_out_fd) {
       if (unlikely(needs_write_pipe_fd)) {
         needs_file_out_fd = 0;
@@ -161,6 +146,7 @@ ssize_t write(int fildes, const void *buf, size_t nbyte)
 
     return res;
 }
+*/
 
 
 int gettimeofday(struct timeval *tp, void *tzp)
@@ -177,6 +163,7 @@ int gettimeofday(struct timeval *tp, void *tzp)
 
     int res = (*original_gettimeofday)(tp, tzp);
     write(time_fd, tp, sizeof(*tp));
+    write(time_fd, tzp, sizeof(*tzp));
     // my_ck_write(time_fd, &tp, sizeof(tp), "gettimeofday");
     return res;
 }
