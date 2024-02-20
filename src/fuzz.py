@@ -69,7 +69,7 @@ class FuzzRunner:
                     },
                 )
 
-        # TODO: more verbose error
+        # if a fuzz run fails (most likely a replay run) just keep going
         except Exception as e:
             pass
 
