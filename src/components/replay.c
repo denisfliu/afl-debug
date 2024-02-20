@@ -85,14 +85,21 @@ static int hook(long syscall_number,
 	return 1;
 }
 
-/*
 ssize_t read(int fildes, void *buf, size_t nbyte)
 {
     ssize_t (*original_read)(int, void *, size_t);
     original_read = dlsym(RTLD_NEXT, "read");
     ssize_t res = (*original_read)(fildes, buf, nbyte);
 
-    if (unlikely(fildes == 198)) {
+	if (res < nbyte) {
+		printf("\n### READ FAIL: read() from fd %d requested %ld, but received %ld ###\n", fildes, nbyte, res);
+	}
+
+	/*
+    if (fildes == urandom_fd) {
+        printf("### READING FROM FAKE DEV URANDOM read() /dev/urandom ###");
+    }
+    else if (unlikely(fildes == 198)) {
       if (unlikely(needs_read_pipe_fd)) {
         needs_read_pipe_fd = 0;
         char* tmp = "/tmp/read_pipe.rep";
@@ -100,15 +107,13 @@ ssize_t read(int fildes, void *buf, size_t nbyte)
       }
       return (*original_read)(read_pipe_fd, buf, nbyte);
     }
-    else if (fildes == urandom_fd) {
-        printf("### READING FROM FAKE DEV URANDOM read() /dev/urandom ###");
-    }
     else if (unlikely(fildes == 47)) {
       next_file_out_fd = res;
     }
+	*/
     return res;
 }
-*/
+
 
 /*
 ssize_t write(int fildes, const void *buf, size_t nbyte) 
@@ -149,23 +154,43 @@ ssize_t write(int fildes, const void *buf, size_t nbyte)
 }
 */
 
-int gettimeofday(struct timeval *tp, void *tzp)
-{
-    if (unlikely(needs_time_fd)) {
-        needs_time_fd = 0;
+// int gettimeofday(struct timeval *tp, void *tzp)
+// {
+//     if (unlikely(needs_time_fd)) {
+//         needs_time_fd = 0;
 
-        char* tmp = "/tmp/time.rep";
-        time_fd = open(tmp, O_RDONLY);
-    }
-    read(time_fd, tp, sizeof(*tp));
+//         char* tmp = "/tmp/time.rep";
+//         time_fd = open(tmp, O_RDONLY);
+//     }
+//     read(time_fd, tp, sizeof(*tp));
 
-    FILE *fptr;
-    fptr = fopen("/tmp/time.txt", "a");
-    fprintf(fptr, "Index: %d | Timeofday: %llu\n", counting_get_time_of_day++, (tp->tv_sec * 1000000ULL) + tp->tv_usec);
-    fclose(fptr);
+//     FILE *fptr;
+//     fptr = fopen("/tmp/time.txt", "a");
+//     fprintf(fptr, "Index: %d | Timeofday: %llu\n", counting_get_time_of_day++, (tp->tv_sec * 1000000ULL) + tp->tv_usec);
+//     fclose(fptr);
     
-    return 1;
-}
+//     return 1;
+// }
+
+// these are irrelevant
+// size_t fread(void *ptr, size_t size, size_t n, FILE *stream) {
+// 	ssize_t (*original_fread)(void*, size_t, size_t, FILE*);
+//     original_fread = dlsym(RTLD_NEXT, "fread");
+//     ssize_t res = (*original_fread)(ptr, size, n, stream);
+
+// 	printf("CALLING FREAD(%p, %ld, %ld, %p)\n", ptr, size, n, stream);
+
+// 	return res;
+// }
+// size_t fwrite(const void *ptr, size_t size, size_t n, FILE *s) {
+// 	ssize_t (*original_fwrite)(const void*, size_t, size_t, FILE*);
+//     original_fwrite = dlsym(RTLD_NEXT, "fwrite");
+//     ssize_t res = (*original_fwrite)(ptr, size, n, s);
+
+// 	printf("CALLING FWRITE(%p, %ld, %ld, %p)\n", ptr, size, n, s);
+
+// 	return res;
+// }
 
 static __attribute__((constructor)) void
 start(void)
