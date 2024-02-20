@@ -158,29 +158,34 @@ ssize_t write(int fildes, const void *buf, size_t nbyte)
 }
 */
 
-
-// int gettimeofday(struct timeval *tp, void *tzp)
-// {
+// gettimeofday essentially just does:
+// 		tv->tv_sec = (long int) time ((time_t *) NULL);
+// 		tv->tv_usec = 0L;
+// which then modifies the rand_seed because AFL++ does this in afl-fuzz.c:
+// 		gettimeofday(&tv, &tz);
+//   	rand_set_seed(afl, tv.tv_sec ^ tv.tv_usec ^ getpid());
+int gettimeofday(struct timeval *tp, void *tzp)
+{
     
-//     int (*original_gettimeofday)(struct timeval *, void *);
-//     original_gettimeofday = dlsym(RTLD_NEXT, "gettimeofday");
-//     if (unlikely(needs_time_fd)) {
-//         needs_time_fd = 0;
+    int (*original_gettimeofday)(struct timeval *, void *);
+    original_gettimeofday = dlsym(RTLD_NEXT, "gettimeofday");
+    if (unlikely(needs_time_fd)) {
+        needs_time_fd = 0;
 
-//         char* tmp = "/tmp/time.rep";
-//         time_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
-//     }
+        char* tmp = "/tmp/time.rep";
+        time_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
+    }
 
-//     int res = (*original_gettimeofday)(tp, tzp);
-//     write(time_fd, tp, sizeof(*tp));
+    int res = (*original_gettimeofday)(tp, tzp);
+    write(time_fd, tp, sizeof(*tp));
 
-//     FILE *fptr;
-//     fptr = fopen("/tmp/time.txt", "a");
-//     fprintf(fptr, "Index: %d | Timeofday: %llu\n", counting_get_time_of_day++, (tp->tv_sec * 1000000ULL) + tp->tv_usec);
-//     fclose(fptr);
+    FILE *fptr;
+    fptr = fopen("/tmp/time.txt", "a");
+    fprintf(fptr, "Index: %d | Timeofday: %llu\n", counting_get_time_of_day++, (tp->tv_sec * 1000000ULL) + tp->tv_usec);
+    fclose(fptr);
     
-//     return res;
-// }
+    return res;
+}
 
 // these are irrelevant
 // size_t fread(void *ptr, size_t size, size_t n, FILE *stream) {
