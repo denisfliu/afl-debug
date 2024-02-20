@@ -48,4 +48,9 @@ make install
 python -m run_bench -p [xpdf/sleep/objdump/custom_binary_path]
 ```
 
+Example:
+```
+python3 -m run_bench -t 30 -i 5 -b xpdf -f -ff
+```
+
 syscall_intercept Library: https://github.com/pmem/syscall_intercept

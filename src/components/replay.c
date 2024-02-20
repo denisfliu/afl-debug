@@ -65,20 +65,22 @@ static int hook(long syscall_number,
 	(void) arg4;
 	(void) arg5;
 
+	// use syscall_intercept library to detect openat() call
 	if (syscall_number == SYS_openat) {
-		char buf_copy[256] = "";
-    strcat(buf_copy, (char *) arg1);
+		char buf_copy[256] = {};
+    	strcpy(buf_copy, (char *) arg1);
 
-    if (unlikely(needs_rand_below_fd) && strcmp(buf_copy, "/dev/urandom") == 0) {
-        char* tmp = "/tmp/replay.rep";
-        *result = syscall_no_intercept(SYS_openat, arg0, tmp, arg2, arg3, arg4);
-        urandom_fd = *result;
-        printf("### replay.c openat() /dev/urandom | fd: %d ###", urandom_fd);
+		// in replay.so we open /tmp/replay.rep instead of /dev/urandom
+		if (unlikely(needs_rand_below_fd) && strcmp(buf_copy, "/dev/urandom") == 0) {
+			char* tmp = "/tmp/replay.rep";
+			*result = syscall_no_intercept(SYS_openat, arg0, tmp, arg2, arg3, arg4);
+			urandom_fd = *result;
+			printf("\n### replay.c openat() /dev/urandom (/tmp/replay.rep) | fd: %d ###\n", urandom_fd);
 
-        needs_rand_below_fd = 0;
-        // rand_below_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
-	return 0;
-    }
+			needs_rand_below_fd = 0;
+			// rand_below_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
+			return 0;
+		}
 	}
 	return 1;
 }

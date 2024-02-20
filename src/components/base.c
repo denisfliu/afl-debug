@@ -69,19 +69,24 @@ static int hook(long syscall_number,
 	(void) arg4;
 	(void) arg5;
 
+  	// use syscall_intercept library to detect openat() call
 	if (syscall_number == SYS_openat) {
-		char buf_copy[256] = "";
-        strcat(buf_copy, (char *) arg1);
+		char buf_copy[256] = {};
+        strcpy(buf_copy, (char *) arg1);
 
+		// in base.so we let the normal /dev/urandom be opened and read from, and just make a copy of its contents
 		*result = syscall_no_intercept(SYS_openat, arg0, arg1, arg2, arg3, arg4);
 
+		// check if the file being openat()'d is /dev/urandom
         if (unlikely(needs_rand_below_fd) && strcmp(buf_copy, "/dev/urandom") == 0) {
             urandom_fd = *result;
-            printf("### base.c openat() /dev/urandom | fd: %d ###", urandom_fd);
+            printf("\n### base.c openat() /dev/urandom | fd: %d ###\n", urandom_fd);
 
+			// if yes, then open /tmp/replay.rep as append so we can save /dev/urandom contents whenever read() is called
             needs_rand_below_fd = 0;
             char* tmp = "/tmp/replay.rep";
             rand_below_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
+            printf("### base.c openat() /tmp/replay.rep | fd: %d ###\n", rand_below_fd);
         }
 
 
@@ -95,9 +100,13 @@ ssize_t read(int fildes, void *buf, size_t nbyte)
     ssize_t (*original_read)(int, void *, size_t);
     original_read = dlsym(RTLD_NEXT, "read");
     ssize_t res = (*original_read)(fildes, buf, nbyte);
+
+	// if the file descriptor being read() is /dev/urandom, add the contents of that read() to our replay.rep
     if (fildes == urandom_fd) {
+		printf("\nreading from /dev/urandom %ld bytes, writing copy of contents to /tmp/replay.rep\n", nbyte);
         write(rand_below_fd, buf, nbyte);
     }
+	
     /*
     else if (fildes == 198) {
       if (unlikely(needs_read_pipe_fd)) {
