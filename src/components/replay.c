@@ -75,7 +75,6 @@ static int hook(long syscall_number,
     	strcpy(buf_copy, (char *) arg1);
 
 		// in replay.so we open /tmp/replay.rep instead of /dev/urandom
-    /*
 		if (unlikely(needs_rand_below_fd) && strcmp(buf_copy, "/dev/urandom") == 0) {
 			char* tmp = "/tmp/replay.rep";
 			*result = syscall_no_intercept(SYS_openat, arg0, tmp, arg2, arg3, arg4);
@@ -86,22 +85,7 @@ static int hook(long syscall_number,
 			// rand_below_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
 			return 0;
 		}
-    */
 
-    // testing just reading everything
-		if (unlikely(needs_rand_below_fd)) {
-			char* tmp = "/tmp/replay.rep";
-			*result = syscall_no_intercept(SYS_openat, arg0, tmp, arg2, arg3, arg4);
-			urandom_fd = *result;
-			printf("\n### replay.c openat() /dev/urandom (/tmp/replay.rep) | fd: %d ###\n", urandom_fd);
-
-			needs_rand_below_fd = 0;
-			// rand_below_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
-			return 0;
-		} else {
-      *result = urandom_fd;
-      return 0;
-    }
 	}
 	return 1;
 }

@@ -82,8 +82,7 @@ static int hook(long syscall_number,
 		*result = syscall_no_intercept(SYS_openat, arg0, arg1, arg2, arg3, arg4);
 
 		// check if the file being openat()'d is /dev/urandom
-        //if (unlikely(needs_rand_below_fd) && strcmp(buf_copy, "/dev/urandom") == 0) {
-        if (unlikely(needs_rand_below_fd)) {
+        if (unlikely(needs_rand_below_fd) && strcmp(buf_copy, "/dev/urandom") == 0) {
             urandom_fd = *result;
             printf("\n### base.c openat() /dev/urandom | fd: %d ###\n", urandom_fd);
 
@@ -107,10 +106,10 @@ ssize_t read(int fildes, void *buf, size_t nbyte)
     ssize_t res = (*original_read)(fildes, buf, nbyte);
 
 	// if the file descriptor being read() is /dev/urandom, add the contents of that read() to our replay.rep
-    //if (fildes == urandom_fd) {
-		//printf("\nreading from /dev/urandom %ld bytes, writing copy of contents to /tmp/replay.rep\n", nbyte);
+    if (fildes == urandom_fd) {
+		printf("\nreading from /dev/urandom %ld bytes, writing copy of contents to /tmp/replay.rep\n", nbyte);
         write(rand_below_fd, buf, nbyte);
-    //}
+    }
 	
     /*
     else if (fildes == 198) {
