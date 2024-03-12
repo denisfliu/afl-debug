@@ -1,4 +1,5 @@
 afl_path: '/home/sefcom/AFLplusplus/afl-fuzz'
+strace_output: '/tmp/strace_output.txt'
 debug_mode: 'Line'
 
 fuzz:

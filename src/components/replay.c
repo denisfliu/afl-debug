@@ -13,6 +13,10 @@
 #include <syscall.h>
 #include <stdlib.h>
 
+// for backtrace
+#include <execinfo.h>
+#include <stdlib.h>
+
 #include "libsyscall_intercept_hook_point.h"
 
 #if __GNUC__ < 6
@@ -71,6 +75,7 @@ static int hook(long syscall_number,
     	strcpy(buf_copy, (char *) arg1);
 
 		// in replay.so we open /tmp/replay.rep instead of /dev/urandom
+    /*
 		if (unlikely(needs_rand_below_fd) && strcmp(buf_copy, "/dev/urandom") == 0) {
 			char* tmp = "/tmp/replay.rep";
 			*result = syscall_no_intercept(SYS_openat, arg0, tmp, arg2, arg3, arg4);
@@ -81,6 +86,22 @@ static int hook(long syscall_number,
 			// rand_below_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
 			return 0;
 		}
+    */
+
+    // testing just reading everything
+		if (unlikely(needs_rand_below_fd)) {
+			char* tmp = "/tmp/replay.rep";
+			*result = syscall_no_intercept(SYS_openat, arg0, tmp, arg2, arg3, arg4);
+			urandom_fd = *result;
+			printf("\n### replay.c openat() /dev/urandom (/tmp/replay.rep) | fd: %d ###\n", urandom_fd);
+
+			needs_rand_below_fd = 0;
+			// rand_below_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
+			return 0;
+		} else {
+      *result = urandom_fd;
+      return 0;
+    }
 	}
 	return 1;
 }
@@ -91,9 +112,10 @@ ssize_t read(int fildes, void *buf, size_t nbyte)
     original_read = dlsym(RTLD_NEXT, "read");
     ssize_t res = (*original_read)(fildes, buf, nbyte);
 
-	if (res < nbyte) {
-		printf("\n### READ FAIL: read() from fd %d requested %ld, but received %ld ###\n", fildes, nbyte, res);
-	}
+	// check if read() fails in our replay runs
+	// if (res < nbyte) {
+	// 	printf("\n### READ FAIL: read() from fd %d requested %ld, but received %ld ###\n", fildes, nbyte, res);
+	// }
 
 	/*
     if (fildes == urandom_fd) {
@@ -170,10 +192,35 @@ int gettimeofday(struct timeval *tp, void *tzp)
     }
     read(time_fd, tp, sizeof(*tp));
 
+/*
+  some stuff to check backtrace (not working)
     FILE *fptr;
-    fptr = fopen("/tmp/time.txt", "a");
-    fprintf(fptr, "Index: %d | Timeofday: %llu\n", counting_get_time_of_day++, (tp->tv_sec * 1000000ULL) + tp->tv_usec);
+    fptr = fopen("/tmp/time1.txt", "a");
+    void *array[4];
+    size_t size;
+    char **strings;
+    size_t i;
+
+    size = backtrace (array, 4);
+    strings = backtrace_symbols (array, size);
+
+    fprintf(fptr, "Index: %d | Timeofday: %llu", counting_get_time_of_day++, (unsigned long long)(tp->tv_sec * 1000000ULL) + tp->tv_usec);
+    for (i = 0; i < size; i++) {
+      char cmd[256];
+        snprintf(cmd, sizeof(cmd), "addr2line -f -e /home/sefcom/AFLplusplus/afl-fuzz %s", strings[i]);
+        FILE *cmd_fp = popen(cmd, "r");
+        if (cmd_fp) {
+            char buf[4096];
+            if (fgets(buf, sizeof(buf), cmd_fp) != NULL) {
+                fprintf(fptr, " | %s", buf);
+            }
+            pclose(cmd_fp);
+        }
+    }
+    fprintf(fptr, "\n");
     fclose(fptr);
+    free(strings);
+*/
     
     return 1;
 }
@@ -197,6 +244,29 @@ int gettimeofday(struct timeval *tp, void *tzp)
 
 // 	return res;
 // }
+
+// trying to check if forkserver has anything to do with it; I don't think it does
+// pid_t fork(void) {
+// 	pid_t (*original_fork)(void);
+// 	original_fork = dlsym(RTLD_NEXT, "fork");
+// 	pid_t res = (*original_fork)();
+
+// 	printf("\nCALLED FORK: %d\n", res);
+
+// 	return res;
+// }
+
+/*
+int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) {
+    int (*original_select)(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);
+    original_select = dlsym(RTLD_NEXT, "select");
+    int res = original_select(nfds, readfds, writefds, exceptfds, timeout);
+
+    printf("\nINTERCEPTING SELECT(%d, %p, %p, %p, %p)\n", nfds, readfds, writefds, exceptfds, timeout);
+
+    return res;
+}
+*/
 
 static __attribute__((constructor)) void
 start(void)

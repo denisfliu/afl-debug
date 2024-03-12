@@ -22,6 +22,7 @@ def main(args):
         ld_preload=args.use_ldpreload,
         double_force=args.double_force,
         write_results=args.write_results,
+        # strace=args.strace,
     )
     # print(b)
     b.bench()
@@ -45,6 +46,9 @@ if __name__ == "__main__":
         print(
             "-w, --write_results : write the similarity percentages to a file in output_dir"
         )
+        # print(
+        #     "-st, --strace : use strace on the afl++ fuzzing process and save the output to a file specified in the config.yaml"
+        # )
         print("Binaries supported:")
         sys.exit(1)
 
@@ -58,6 +62,7 @@ if __name__ == "__main__":
     parser.add_argument("-ff", "--double_force", action="store_true", required=False)
     parser.add_argument("-l", "--use_ldpreload", action="store_false", required=False)
     parser.add_argument("-w", "--write_results", action="store_false", required=False)
+    # parser.add_argument("-st", "--strace", action="store_true", required=False)
     args = parser.parse_args()
     # print(args)
     main(args)

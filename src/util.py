@@ -15,3 +15,4 @@ def fancy_print(s: str):
 
 def delete_metata_in_tmp():
     os.popen(f"rm /tmp/*.rep")
+    os.popen(f"rm /tmp/time.txt")

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Input file
-input_file="/tmp/time1.txt"
+input_file="/tmp/time.txt"
 
 # Output directory
 output_dir="time/"

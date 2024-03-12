@@ -29,6 +29,7 @@ class Bench:
     double_force: bool = False
     ld_preload: bool = True
     write_results: bool = False
+    # strace: bool = False
 
     def __post_init__(self):
         if self.binary_dir.lower() == "xpdf":
@@ -103,6 +104,8 @@ class Bench:
             command = f"{self.config.afl_path} -i {input_dir} -o {output_dir} -- {self.binary_dir} -d @@"
         else:
             command = f"{self.config.afl_path} -i {input_dir} -o {output_dir} -- {self.binary_dir} @@"
+        # if self.strace:
+        #     command = f"strace -o {self.config.strace_output} " + command
         return FuzzRunner(
             fuzz_command=command,
             base_dir=self.base_dir,
