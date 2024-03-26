@@ -57,6 +57,7 @@ int needs_write_pipe_fd = 1;
 int32_t read_pipe_fd;
 int32_t write_pipe_fd;
 
+
 // experiment
 int needs_file_out_fd = 1;
 int32_t next_file_out_fd = 13;
@@ -129,38 +130,6 @@ ssize_t read(int fildes, void *buf, size_t nbyte)
     return res;
 }
 
-/*
-ssize_t write(int fildes, const void *buf, size_t nbyte) 
-{
-    ssize_t (*original_write)(int, const void *, size_t);
-    original_write = dlsym(RTLD_NEXT, "write");
-    ssize_t res = (*original_write)(fildes, buf, nbyte);
-
-    if (fildes == 1000) {
-
-    }
-    else if (fildes == 199) {
-      if (unlikely(needs_write_pipe_fd)) {
-        needs_write_pipe_fd = 0;
-        char* tmp = "/tmp/write_pipe.rep";
-        write_pipe_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
-
-      }
-      write(write_pipe_fd, buf, nbyte);
-    }
-    else if (fildes == next_file_out_fd) {
-      if (unlikely(needs_write_pipe_fd)) {
-        needs_file_out_fd = 0;
-        char* tmp = "/tmp/file_out.rep";
-        file_out_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
-
-      }
-      write(file_out_fd, buf, nbyte);
-    }
-
-    return res;
-}
-*/
 
 // gettimeofday essentially just does:
 // 		tv->tv_sec = (long int) time ((time_t *) NULL);
@@ -183,38 +152,118 @@ int gettimeofday(struct timeval *tp, void *tzp)
     int res = (*original_gettimeofday)(tp, tzp);
     write(time_fd, tp, sizeof(*tp));
 
-/*
-  some stuff to check backtrace (not working)
-    FILE *fptr;
-    fptr = fopen("/tmp/time0.txt", "a");
-    void *array[4];
-    size_t size;
-    char **strings;
-    size_t i;
-
-    size = backtrace (array, 4);
-    strings = backtrace_symbols (array, size);
-
-    fprintf(fptr, "Index: %d | Timeofday: %llu", counting_get_time_of_day++, (unsigned long long)(tp->tv_sec * 1000000ULL) + tp->tv_usec);
-    for (i = 0; i < size; i++) {
-      char cmd[256];
-        snprintf(cmd, sizeof(cmd), "addr2line -f -e /home/sefcom/AFLplusplus/afl-fuzz %s", strings[i]);
-        FILE *cmd_fp = popen(cmd, "r");
-        if (cmd_fp) {
-            char buf[4096];
-            if (fgets(buf, sizeof(buf), cmd_fp) != NULL) {
-                fprintf(fptr, " | %s", buf);
-            }
-            pclose(cmd_fp);
-        }
-    }
-    fprintf(fptr, "\n");
-    fclose(fptr);
-    free(strings);
-*/
-    
     return res;
 }
+
+/*/////////////////////////////
+//////////     atoi    ////////
+/////////////////////////////*/
+// atoi
+int fsrv_save_flag = 0;
+int needs_fault_fd = 1;
+int32_t fault_fd;
+
+int atoi(const char *string) {
+  int (*original_atoi)(const char *);
+  original_atoi = dlsym(RTLD_NEXT, "atoi");
+  int res = (*original_atoi)(string);
+  if (strcmp(string, "replay_indicator_fsrv") == 0) {
+    fsrv_save_flag = (1 + fsrv_save_flag) % 2;
+    return 0;
+  }
+  
+  if (fsrv_save_flag) {
+    if (unlikely(needs_fault_fd)) {
+      char* tmp = "/tmp/fault.rep";
+      fault_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
+      needs_fault_fd = 0;
+    }
+    write(fault_fd, &res, sizeof(int));
+    return res;
+  }
+  return res;
+}
+
+/*/////////////////////////////
+//////////   strtoul  ////////
+/////////////////////////////*/
+unsigned long strtoul(const char *nptr, char **endptr, int base) {
+  unsigned long (*original_strtoul)(const char *, char **, int);
+  original_strtoul = dlsym(RTLD_NEXT, "strtoul");
+  unsigned long res = (*original_strtoul)(nptr, endptr, base);
+  if (strcmp(nptr, "replay_indicator_fsrv") == 0) {
+    fsrv_save_flag = (1 + fsrv_save_flag) % 2;
+    return 0;
+  }
+
+  if (fsrv_save_flag) {
+    if (unlikely(needs_fault_fd)) {
+      char* tmp = "/tmp/fault.rep";
+      fault_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
+      needs_fault_fd = 0;
+    }
+    write(fault_fd, &res, sizeof(unsigned long));
+    return res;
+  }
+  return res;
+}
+
+/*/////////////////////////////
+//////////   strtoull  ////////
+/////////////////////////////*/
+int next_strtoull_is_important = 0;
+int needs_hash_fd = 1;
+int32_t hash_fd;
+
+unsigned long long strtoull(const char *nptr, char **endptr, int base) {
+  unsigned long long  (*original_strtoull)(const char*, char **, int);
+  original_strtoull = dlsym(RTLD_NEXT, "strtoull");
+  unsigned long long res = (*original_strtoull)(nptr, endptr, base);
+  if (strcmp(nptr, "replay_indicator_hash64") == 0) {
+    next_strtoull_is_important = 1;
+    return 0;
+  } else if (strcmp(nptr, "replay_indicator_fsrv") == 0) {
+    fsrv_save_flag = (1 + fsrv_save_flag) % 2;
+    return 0;
+  }
+  
+  if (next_strtoull_is_important) {
+    next_strtoull_is_important = 0;
+    if (unlikely(needs_hash_fd)) {
+      char* tmp = "/tmp/hash.rep";
+      hash_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
+      needs_hash_fd = 0;
+    }
+    write(hash_fd, &res, sizeof(unsigned long long));
+    return res;
+  } else if (fsrv_save_flag) {
+    if (unlikely(needs_fault_fd)) {
+      char* tmp = "/tmp/fault.rep";
+      fault_fd = open(tmp, O_WRONLY | O_CREAT | O_APPEND, S_IRWXU);
+      needs_fault_fd = 0;
+    }
+    write(hash_fd, &res, sizeof(unsigned long long));
+    return res;
+  }
+
+  return res;
+}
+
+
+/*
+int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) {
+    int (*original_select)(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);
+    original_select = dlsym(RTLD_NEXT, "select");
+    int res = original_select(nfds, readfds, writefds, exceptfds, timeout);
+
+    FILE *fptr;
+    fptr = fopen("/tmp/select_output.txt", "a");
+    fprintf(fptr, "\nINTERCEPTING SELECT(%d, %p, %p, %p, %p)\n", nfds, readfds, writefds, exceptfds, timeout);
+    fclose(fptr);
+
+    return res;
+}
+*/
 
 // these are irrelevant
 // size_t fread(void *ptr, size_t size, size_t n, FILE *stream) {
@@ -246,19 +295,6 @@ int gettimeofday(struct timeval *tp, void *tzp)
 
 // 	return res;
 // }
-
-int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) {
-    int (*original_select)(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);
-    original_select = dlsym(RTLD_NEXT, "select");
-    int res = original_select(nfds, readfds, writefds, exceptfds, timeout);
-
-    FILE *fptr;
-    fptr = fopen("/tmp/select_output.txt", "a");
-    fprintf(fptr, "\nINTERCEPTING SELECT(%d, %p, %p, %p, %p)\n", nfds, readfds, writefds, exceptfds, timeout);
-    fclose(fptr);
-
-    return res;
-}
 
 static __attribute__((constructor)) void
 start(void)

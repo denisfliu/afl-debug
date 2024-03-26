@@ -90,76 +90,6 @@ static int hook(long syscall_number,
 	return 1;
 }
 
-ssize_t read(int fildes, void *buf, size_t nbyte)
-{
-    ssize_t (*original_read)(int, void *, size_t);
-    original_read = dlsym(RTLD_NEXT, "read");
-    ssize_t res = (*original_read)(fildes, buf, nbyte);
-
-	// check if read() fails in our replay runs
-	// if (res < nbyte) {
-	// 	printf("\n### READ FAIL: read() from fd %d requested %ld, but received %ld ###\n", fildes, nbyte, res);
-	// }
-
-	/*
-    if (fildes == urandom_fd) {
-        printf("### READING FROM FAKE DEV URANDOM read() /dev/urandom ###");
-    }
-    else if (unlikely(fildes == 198)) {
-      if (unlikely(needs_read_pipe_fd)) {
-        needs_read_pipe_fd = 0;
-        char* tmp = "/tmp/read_pipe.rep";
-        read_pipe_fd = open(tmp, O_RDONLY);
-      }
-      return (*original_read)(read_pipe_fd, buf, nbyte);
-    }
-    else if (unlikely(fildes == 47)) {
-      next_file_out_fd = res;
-    }
-	*/
-    return res;
-}
-
-
-/*
-ssize_t write(int fildes, const void *buf, size_t nbyte) 
-{
-    ssize_t (*original_write)(int, const void *, size_t);
-    original_write = dlsym(RTLD_NEXT, "write");
-    ssize_t res;
-    if (0) {
-
-    }
-    else if (unlikely(fildes == 199)) {
-      void *buf1 = (void*) malloc(nbyte);
-      if (unlikely(needs_write_pipe_fd)) {
-        needs_write_pipe_fd = 0;
-        char* tmp = "/tmp/write_pipe.rep";
-        write_pipe_fd = open(tmp, O_RDONLY);
-      }
-      read(write_pipe_fd, buf1, nbyte);
-      res = (*original_write)(fildes, buf1, nbyte);
-      free(buf1);
-    }
-    else if (unlikely(fildes == 47)) {
-      void *buf1 = (void*) malloc(nbyte);
-      if (unlikely(needs_file_out_fd)) {
-        needs_file_out_fd = 0;
-        char* tmp = "/tmp/file_out.rep";
-        file_out_fd = open(tmp, O_RDONLY);
-      }
-      read(file_out_fd, buf1, nbyte);
-      res = (*original_write)(fildes, buf1, nbyte);
-      free(buf1);
-    } 
-    else {
-      res = (*original_write)(fildes, buf, nbyte);
-    }
-
-    return res;
-}
-*/
-
 // gettimeofday essentially just does:
 // 		tv->tv_sec = (long int) time ((time_t *) NULL);
 // 		tv->tv_usec = 0L;
@@ -175,82 +105,93 @@ int gettimeofday(struct timeval *tp, void *tzp)
         time_fd = open(tmp, O_RDONLY);
     }
     read(time_fd, tp, sizeof(*tp));
-
-/*
-  some stuff to check backtrace (not working)
-    FILE *fptr;
-    fptr = fopen("/tmp/time1.txt", "a");
-    void *array[4];
-    size_t size;
-    char **strings;
-    size_t i;
-
-    size = backtrace (array, 4);
-    strings = backtrace_symbols (array, size);
-
-    fprintf(fptr, "Index: %d | Timeofday: %llu", counting_get_time_of_day++, (unsigned long long)(tp->tv_sec * 1000000ULL) + tp->tv_usec);
-    for (i = 0; i < size; i++) {
-      char cmd[256];
-        snprintf(cmd, sizeof(cmd), "addr2line -f -e /home/sefcom/AFLplusplus/afl-fuzz %s", strings[i]);
-        FILE *cmd_fp = popen(cmd, "r");
-        if (cmd_fp) {
-            char buf[4096];
-            if (fgets(buf, sizeof(buf), cmd_fp) != NULL) {
-                fprintf(fptr, " | %s", buf);
-            }
-            pclose(cmd_fp);
-        }
-    }
-    fprintf(fptr, "\n");
-    fclose(fptr);
-    free(strings);
-*/
     
     return 1;
 }
 
-// these are irrelevant
-// size_t fread(void *ptr, size_t size, size_t n, FILE *stream) {
-// 	ssize_t (*original_fread)(void*, size_t, size_t, FILE*);
-//     original_fread = dlsym(RTLD_NEXT, "fread");
-//     ssize_t res = (*original_fread)(ptr, size, n, stream);
+// atoi
+int fsrv_save_flag = 0;
+int needs_fault_fd = 1;
+int32_t fault_fd;
+int atoi(const char *string) {
+  if (strcmp(string, "replay_indicator_fsrv") == 0) {
+    fsrv_save_flag = (1 + fsrv_save_flag) % 2;
+    return 0;
+  }
+  
+  if (fsrv_save_flag) {
+    if (unlikely(needs_fault_fd)) {
+      char* tmp = "/tmp/fault.rep";
+      fault_fd = open(tmp, O_RDONLY);
+      needs_fault_fd = 0;
+    }
+    int val;
+    ssize_t bytesRead = read(fault_fd, &val, sizeof(int));
+    //if (bytesRead != -1) return val;
+    (void)bytesRead;
+    return val;
+  }
 
-// 	printf("CALLING FREAD(%p, %ld, %ld, %p)\n", ptr, size, n, stream);
-
-// 	return res;
-// }
-// size_t fwrite(const void *ptr, size_t size, size_t n, FILE *s) {
-// 	ssize_t (*original_fwrite)(const void*, size_t, size_t, FILE*);
-//     original_fwrite = dlsym(RTLD_NEXT, "fwrite");
-//     ssize_t res = (*original_fwrite)(ptr, size, n, s);
-
-// 	printf("CALLING FWRITE(%p, %ld, %ld, %p)\n", ptr, size, n, s);
-
-// 	return res;
-// }
-
-// trying to check if forkserver has anything to do with it; I don't think it does
-// pid_t fork(void) {
-// 	pid_t (*original_fork)(void);
-// 	original_fork = dlsym(RTLD_NEXT, "fork");
-// 	pid_t res = (*original_fork)();
-
-// 	printf("\nCALLED FORK: %d\n", res);
-
-// 	return res;
-// }
-
-/*
-int select(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout) {
-    int (*original_select)(int nfds, fd_set *readfds, fd_set *writefds, fd_set *exceptfds, struct timeval *timeout);
-    original_select = dlsym(RTLD_NEXT, "select");
-    int res = original_select(nfds, readfds, writefds, exceptfds, timeout);
-
-    printf("\nINTERCEPTING SELECT(%d, %p, %p, %p, %p)\n", nfds, readfds, writefds, exceptfds, timeout);
-
-    return res;
+  int (*original_atoi)(const char *);
+  original_atoi = dlsym(RTLD_NEXT, "atoi");
+  int res = (*original_atoi)(string);
+  return res;
 }
-*/
+
+unsigned long strtoul(const char *nptr, char **endptr, int base) {
+  if (strcmp(nptr, "replay_indicator_fsrv") == 0) {
+    fsrv_save_flag = (1 + fsrv_save_flag) % 2;
+    return 0;
+  }
+  
+  if (fsrv_save_flag) {
+    if (unlikely(needs_fault_fd)) {
+      char* tmp = "/tmp/fault.rep";
+      fault_fd = open(tmp, O_RDONLY);
+      needs_fault_fd = 0;
+    }
+    unsigned long val;
+    ssize_t bytesRead = read(fault_fd, &val, sizeof(unsigned long));
+    //if (bytesRead != -1) return val;
+    (void)bytesRead;
+    return val;
+  }
+
+  unsigned long  (*original_strtoul)(const char*, char **, int);
+  original_strtoul = dlsym(RTLD_NEXT, "strtoul");
+  unsigned long res = (*original_strtoul)(nptr, endptr, base);
+  return res;
+}
+
+int next_strtoull_is_important = 0;
+int needs_hash_fd = 1;
+int32_t hash_fd;
+unsigned long long strtoull(const char *nptr, char **endptr, int base) {
+  if (strcmp(nptr, "replay_indicator_hash64") == 0) {
+    next_strtoull_is_important = 1;
+    return 0;
+  }
+  
+  if (next_strtoull_is_important) {
+    next_strtoull_is_important = 0;
+    if (unlikely(needs_hash_fd)) {
+      char* tmp = "/tmp/hash.rep";
+      hash_fd = open(tmp, O_RDONLY);
+      needs_hash_fd = 0;
+    }
+    unsigned long long val;
+    ssize_t bytesRead = read(hash_fd, &val, sizeof(unsigned long long));
+    //if (bytesRead != -1) return val;
+    (void)bytesRead;
+    return val;
+  }
+
+  unsigned long long  (*original_strtoull)(const char*, char **, int);
+  original_strtoull = dlsym(RTLD_NEXT, "strtoull");
+  unsigned long long res = (*original_strtoull)(nptr, endptr, base);
+  return res;
+}
+
 
 static __attribute__((constructor)) void
 start(void)
